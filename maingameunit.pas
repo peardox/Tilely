@@ -15,10 +15,11 @@ uses
   CastleTriangles, CastleShapes, CastleVectors,
   CastleSceneCore, CastleScene, CastleTransform,
   CastleViewport, CastleCameras, CastleProjection,
-  X3DNodes, X3DFields, X3DTIme,
+  X3DNodes, X3DFields, X3DTIme, CastleRectangles,
   CastleImages, CastleGLImages, CastleDebugTransform,
   CastleTextureImages, CastleCompositeImage, CastleBoxes,
-  CastleApplicationProperties, CastleLog, CastleTimeUtils, CastleKeysMouse;
+  CastleApplicationProperties, CastleLog, CastleTimeUtils,
+  CastleFilesUtils, CastleKeysMouse;
 
 type
   TExtents = record
@@ -63,7 +64,7 @@ type
     ViewScale: Single;
     ViewWidth: Single;
     ViewHeight: Single;
-
+    StretchMultiplier: Single;
   public
     InfoLabel: TCastleLabel;
     constructor Create(AOwner: TComponent); override;
@@ -73,8 +74,11 @@ type
     procedure BootStrap(Sender: TObject);
     procedure Reflow;
     procedure LoadViewport;
-    procedure LoadScene;
+    procedure LoadScene(const AFile: String);
     function CalcAngles(const AScene: TCastleScene): TExtents;
+    function CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False): TCastleImage;
+    procedure ShowAppMessage(const AMsg: String);
+    procedure GrabSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True);
   end;
 
 var
@@ -97,6 +101,7 @@ begin
   ViewScale := 1;
   ViewWidth := 64;
   ViewHeight := 64;
+  StretchMultiplier := 1;
   FullSize := True;
 //  IVC := TTexturesVideosCache.Create;
 end;
@@ -111,7 +116,9 @@ procedure TCastleApp.BootStrap(Sender: TObject);
 begin
   WriteLnLog('BootStrap = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   LoadViewport;
-  LoadScene;
+  LoadScene('castle-data:/medieval_objects/archeryrange.glb');
+//      LoadScene('castle-data:/dungeon_tiles/floorDecoration_wood.glb');
+  GrabSprite(512, 512, 1);
 end;
 
 function TCastleApp.CalcAngles(const AScene: TCastleScene): TExtents;
@@ -190,7 +197,7 @@ begin
   Reflow;
 end;
 
-procedure TCastleApp.LoadScene;
+procedure TCastleApp.LoadScene(const AFile: String);
 var
   Extents: TExtents;
 begin
@@ -205,8 +212,7 @@ begin
     Scene.RenderOptions.MagnificationFilter := magNearest;
     Scene.Setup2D;
     try
-      Scene.Load('castle-data:/medieval_objects/archeryrange.glb'); // logo.png');
-//      Scene.Load('castle-data:/dungeon_tiles/floorDecoration_wood.glb');
+      Scene.Load(AFile);
       Scene.PrepareResources([prSpatial, prRenderSelf, prRenderClones, prScreenEffects],
           True,
           Viewport.PrepareParams);
@@ -381,6 +387,118 @@ begin
   InsertFront(objLabel);
 end;
 
+procedure TCastleApp.ShowAppMessage(const AMsg: String);
+begin
+  WriteLnLog(AMsg);
+end;
+
+procedure TCastleApp.GrabSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True);
+var
+  Sprite: TCastleImage;
+  SName: String;
+begin
+  if not (Scene = nil) then
+    begin
+      Sprite := CreateSpriteImage(Scene, SpriteWidth * OverSample, SpriteHeight * OverSample, UseTransparency);
+      if not(Sprite = nil) then
+        begin
+          if (OverSample > 1) then
+            begin
+              Sprite.Resize(SpriteWidth, SpriteHeight, riLanczos); // Mitchel);
+            end;
+          SName := FileNameAutoInc('grab_%4.4d.png');
+          SaveImage(Sprite, SName);
+          FreeAndNil(Sprite);
+        end;
+    end;
+end;
+
+
+function TCastleApp.CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False): TCastleImage;
+var
+  SourceViewport: TCastleViewport;
+  ViewportRect: TRectangle;
+  Image: TDrawableImage;
+  BackImage: TRGBAlphaImage;
+  Extents: TExtents;
+begin
+  SourceViewport := nil;
+
+  if not(SourceScene = nil) and (TextureWidth > 0) and (TextureHeight > 0) then
+    begin
+      try
+        try
+          BackImage := TRGBAlphaImage.Create(TextureWidth, TextureHeight);
+          BackImage.ClearAlpha(0);
+
+          Image := TDrawableImage.Create(BackImage, true, true);
+
+          Image.RenderToImageBegin;
+
+          SourceViewport := TCastleViewport.Create(nil);
+          SourceViewport.Width := TextureWidth;
+          SourceViewport.Height := TextureHeight;
+          if isSpriteTransparent then
+            begin
+              SourceViewport.Transparent := True;
+              SourceViewport.BackgroundColor := Vector4(1,1,1,0);
+            end
+          else
+            begin
+              SourceViewport.Transparent := False;
+              SourceViewport.BackgroundColor := Vector4(0,0,0,1);
+            end;
+
+          SourceViewport.Setup2D;
+          SourceViewport.Camera.ProjectionType := Viewport.Camera.ProjectionType;
+          SourceViewport.Camera.Orthographic.Origin := Viewport.Camera.Orthographic.Origin;
+          SourceViewport.Camera.Up := Viewport.Camera.Up;
+          SourceViewport.Camera.Direction := Viewport.Camera.Direction;
+          SourceViewport.Camera.Position  := Viewport.Camera.Position;
+
+          if Viewport.Camera.Orthographic.Stretch then
+            begin
+              SourceViewport.Camera.Orthographic.Stretch := True;
+              SourceViewport.Camera.Orthographic.Width := SourceViewport.EffectiveWidth / StretchMultiplier;
+              SourceViewport.Camera.Orthographic.Height := SourceViewport.EffectiveHeight;
+            end;
+
+          Extents := CalcAngles(SourceScene);
+
+          SourceViewport.Camera.Orthographic.Scale := 1 / (Min(TextureWidth, TextureHeight) /
+            Max(Extents.Size.X, Extents.Size.Y));
+
+          SourceViewport.Items := ViewPort.Items;
+
+          ViewportRect := Rectangle(0, 0, TextureWidth, TextureHeight);
+          {$ifndef cgeapp}CastleForm.{$endif}Window.Container.RenderControl(SourceViewport,ViewportRect);
+
+          Image.RenderToImageEnd;
+
+          if not False { Application.OpenGLES } then
+          begin
+            try
+              Result := Image.GetContents(TRGBAlphaImage);
+            except
+              on E : Exception do
+                begin
+                  ShowAppMessage(E.ClassName + LineEnding + E.Message);
+                end;
+            end;
+          end;
+
+        except
+          on E : Exception do
+            begin
+              ShowAppMessage(E.ClassName + LineEnding + E.Message);
+            end;
+        end;
+      finally
+        FreeAndNil(SourceViewport);
+        FreeAndNil(Image);
+      end;
+    end;
+end;
 
 end.
 
