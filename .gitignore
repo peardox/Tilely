@@ -15,6 +15,7 @@
 *.obj
 AndroidSigningProperties.txt
 *Copy*
+grab*
 
 # Heap trace
 heap.trc
@@ -33,7 +34,7 @@ backup/
 *.bak
 lib/
 castle-engine-output/
-# data/
+data/tests/
 
 # Application bundle for Mac OS
 *.app/

@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="3">
+    <Units Count="4">
       <Unit0>
         <Filename Value="TilelyLaz.pas"/>
         <IsPartOfProject Value="True"/>
@@ -54,6 +54,14 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="MainGameUnit"/>
       </Unit2>
+      <Unit3>
+        <Filename Value="showcamerasettings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="CameraForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="ShowCameraSettings"/>
+      </Unit3>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

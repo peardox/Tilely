@@ -12,7 +12,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, GUIInitialization, castle_components, castle_base
+  Forms, GUIInitialization, castle_components, castle_base, ShowCameraSettings
   { you can add units after this };
 
 {$R *.res}
@@ -22,6 +22,7 @@ begin
   Application.Scaled:=True;
   Application.Initialize;
   Application.CreateForm(TCastleForm, CastleForm);
+  Application.CreateForm(TCameraForm, CameraForm);
   Application.Run;
 end.
 
