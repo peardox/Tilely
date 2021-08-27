@@ -12,7 +12,8 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, GUIInitialization, castle_components, castle_base, ShowCameraSettings
+  Forms, GUIInitialization, castle_components, castle_base, ShowCameraSettings,
+  MiscHelpers
   { you can add units after this };
 
 {$R *.res}

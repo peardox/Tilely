@@ -1,10 +1,10 @@
 object CameraForm: TCameraForm
-  Left = 1257
-  Height = 479
-  Top = 572
+  Left = 1252
+  Height = 337
+  Top = 670
   Width = 332
   Caption = 'Camera Settings'
-  ClientHeight = 479
+  ClientHeight = 337
   ClientWidth = 332
   OnShow = FormShow
   LCLVersion = '2.0.10.0'

@@ -19,37 +19,10 @@ uses
   CastleImages, CastleGLImages, CastleDebugTransform,
   CastleTextureImages, CastleCompositeImage, CastleBoxes,
   CastleApplicationProperties, CastleLog, CastleTimeUtils,
-  CastleFilesUtils, CastleKeysMouse;
+  CastleFilesUtils, CastleKeysMouse, CastleNotifications,
+  MiscHelpers;
 
 type
-  TExtents = record
-    Min: TVector2;
-    Max: TVector2;
-    Size: TVector2;
-    Pixels: TVector2;
-    Aspect: Single;
-  end;
-
-  { TCastleViewportHelper }
-  TCastleViewportHelper = class helper for TCastleViewport
-  public
-    procedure ViewFromRadius(const ARadius: Single; const ADirection: TVector3);
-    procedure ViewFromRadius(const ARadius: Single; const AElevation: Single; const ATheta: Single);
-    function CalcAngles(const AScene: TCastleScene): TExtents;
-  end;
-
-  { TCastleSceneHelper }
-  TCastleSceneHelper = class helper for TCastleScene
-  public
-    function Normalize: TVector3;
-  end;
-
-  { TUIStateHelper }
-  TUIStateHelper = class helper for TUIState
-  public
-    procedure CreateLabel(var objLabel: TCastleLabel; const Line: Integer; const BottomUp: Boolean = True; RightAlign: Boolean = False);
-  end;
-
   { TCastleApp }
 
   TCastleApp = class(TUIState)
@@ -73,10 +46,13 @@ type
     procedure setCameraRotationSteps(const AValue: Integer);
     procedure setCameraElevation(const AValue: Single);
   public
+    ViewPane: TCastleRectangleControl;
     Viewport: TCastleViewport;
     Scene: TCastleScene;
     Debug: TDebugTransformBox;
     InfoLabel: TCastleLabel;
+    InfoNote: TCastleNotifications;
+    SettingUp: Boolean;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Start; override; // TUIState
@@ -114,9 +90,10 @@ begin
   ViewScale := 1;
   ViewWidth := 512;
   ViewHeight := 512;
+  SettingUp := False;
   StretchMultiplier := 1;
   CameraRotationSteps := 8;
-  CameraRotation := 1;
+  CameraRotation := 5;
   CameraElevation := -0.81625; // -sqrt(2); //
   OriginalSize := TVector3.Zero;
   FullSize := True;
@@ -133,13 +110,15 @@ procedure TCastleApp.BootStrap(Sender: TObject);
 begin
   WriteLnLog('BootStrap = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   LoadViewport;
+//  LoadScene('castle-data:/tests/brick_tent.gltf');
 //  LoadScene('castle-data:/tests/brick_tent_8.glb');
 //  LoadScene('castle-data:/tests/seperates/brick_tent_8.obj');
-//  LoadScene('castle-data:/tests/isocam.glb');
+  LoadScene('castle-data:/tests/isocam.glb');
 //  LoadScene('castle-data:/tests/isocam_bad_offset.glb');
 //  LoadScene('castle-data:/tests/isocam_micro_zoom.glb');
 //  LoadScene('castle-data:/tests/isocam_macro_zoom.glb');
-  LoadScene('castle-data:/tests/oblique.glb');
+//  LoadScene('castle-data:/tests/oblique.glb');
+//  LoadScene('C:\Assets\Creative Trio\gltf\bridge\stone\Bridge_11.glb');
 //  LoadScene('C:\Assets\ZerinLabs\Retro-Dungeon-EnviroKit\gltf\verA\floor_A.gltf');
 //  LoadScene('C:\Assets\ZerinLabs\Retro-Dungeon-EnviroKit\gltf\verA\floor_B.gltf');
 //  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Buildings/Inn.glb');
@@ -191,7 +170,12 @@ begin
     begin
       fCameraElevation := AValue;
       if Assigned(Viewport) then
-        Viewport.ViewFromRadius(2, CameraElevation, 2 * pi * (CameraRotation / CameraRotationSteps));
+        begin
+          Viewport.ViewFromRadius(2, CameraElevation, 2 * pi * (CameraRotation / CameraRotationSteps));
+          {$ifndef cgeapp}
+          CameraForm.ShowStats(Viewport);
+          {$endif}
+        end;
       ShowInfo;
     end;
 end;
@@ -217,86 +201,38 @@ begin
     end;
 end;
 
-function TCastleViewportHelper.CalcAngles(const AScene: TCastleScene): TExtents;
-var
-  corners: TBoxCorners;
-  OutputPoint3D, RayDirection, RayOrigin: TVector3;
-  i: Integer;
-  Extents: TExtents;
-begin
-  Extents.Min := Vector2(Infinity, Infinity);
-  Extents.Max := Vector2(-Infinity, -Infinity);
-  if not(AScene = nil) then
-    begin
-      if not AScene.BoundingBox.IsEmptyOrZero then
-        begin
-          AScene.BoundingBox.Corners(corners);
-          Self.PositionToRay(Vector2(0, 0), True, RayOrigin, RayDirection);
-          for i := Low(corners) to High(corners) do
-            begin
-              OutputPoint3D := (Self.Camera.ProjectionMatrix * Self.Camera.Matrix).MultPoint(corners[i]);
-              if OutputPoint3D.X < Extents.Min.X then
-                Extents.Min.X := OutputPoint3D.X;
-              if OutputPoint3D.Y < Extents.Min.Y then
-                Extents.Min.Y := OutputPoint3D.Y;
-              if OutputPoint3D.X > Extents.Max.X then
-                Extents.Max.X := OutputPoint3D.X;
-              if OutputPoint3D.Y > Extents.Max.Y then
-                Extents.Max.Y := OutputPoint3D.Y;
-            end;
-
-          Extents.Size.X := (Extents.Max.X - Extents.Min.X);
-          Extents.Size.Y := (Extents.Max.Y - Extents.Min.Y);
-          Extents.Pixels.X := (Self.EffectiveWidth);
-          Extents.Pixels.Y := (Self.EffectiveHeight);
-          Extents.Aspect := Extents.Size.X / Extents.Size.Y;
-
-        end;
-    end;
-  WriteLnLog('2:1 = ' + FormatFloat('0.0000', ArcTan(0.5)));
-  WriteLnLog('Extents.Min  = ' + Extents.Min.ToString);
-  WriteLnLog('Extents.Max  = ' + Extents.Max.ToString);
-  WriteLnLog('Extents.Size = ' + Extents.Size.ToString);
-
-  Result := Extents;
-end;
-
 procedure TCastleApp.LoadViewport;
 begin
-  WriteLnLog('LoadViewport = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
+  WriteLnLog('LoadViewport UIState = ' + FloatToStr(Width) + ' x ' + FloatToStr(Height));
+  WriteLnLog('LoadViewport Effective = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
+  WriteLnLog('LoadViewport EffectiveRect = ' + EffectiveRect.ToString);
 
-  Viewport := TCastleViewport.Create({$ifndef cgeapp}CastleForm.{$endif}Window);
+  ViewPane := TCastleRectangleControl.Create({$ifndef cgeapp}CastleForm.{$endif}Window);
+  ViewPane.FitRect(ViewWidth, ViewHeight, EffectiveRect);
+  ViewPane.Color := Vector4(1,1,1,1);
+  InsertFront(ViewPane);
 
+  Viewport := TCastleViewport.Create(ViewPane);
   Viewport.FullSize := False;
   Viewport.AutoCamera := False;
   Viewport.Setup2D;
-
   Viewport.BackgroundColor := Vector4(1, 0, 0, 1);
   Viewport.NavigationType := ntNone;
   Viewport.AssignDefaultCamera;
-
-  if(EffectiveHeight < EffectiveWidth) then
-    begin
-      Viewport.Width := EffectiveHeight;
-      Viewport.Height := EffectiveHeight;
-    end
-  else
-  begin
-    Viewport.Width := EffectiveWidth;
-    Viewport.Height := EffectiveWidth;
-  end;
-
   Viewport.Camera.Orthographic.Origin := Vector2(0.5, 0.5);
   Viewport.Camera.Orthographic.Width := ViewWidth;
   Viewport.Camera.Orthographic.Height := ViewHeight;
   Viewport.Camera.Orthographic.Scale := 1;
   Viewport.Camera.ProjectionType := ptOrthographic;
+  ViewPane.InsertFront(Viewport);
 
-  InsertFront(Viewport);
+  Viewport.SetRect(Viewport.ParentRect);
+
+WriteLnLog('LoadViewport : ' + Viewport.EffectiveRect.ToString); // SB
+
   CreateLabel(InfoLabel, 0);
+  CreateNotification(InfoNote, 0, False);
   InfoLabel.Exists := False;
-
-  Reflow;
 end;
 
 procedure TCastleApp.LoadScene(const AFile: String);
@@ -331,16 +267,22 @@ begin
 
       Viewport.Items.Add(Scene);
       Viewport.Items.MainScene := Scene;
+
+      {$ifndef cgeapp}
+      SettingUp := True;
+      CastleForm.TrackBar1.Position := CastleForm.TrackBar1.Max div 2;
+      SettingUp := False;
+      {$endif}
+
+      Viewport.SetRect(Viewport.ParentRect);
       Viewport.ViewFromRadius(2, CameraElevation, 2 * pi * (CameraRotation / CameraRotationSteps));
-
       Extents := Viewport.CalcAngles(Scene);
-      ViewWidth := Extents.Size.X;
-      ViewHeight := Extents.Size.Y;
-//      HeightAdjust := Extents.Size.Y / Extents.Size.X;
-      Viewport.Camera.Orthographic.Width := ViewWidth;
-      Viewport.Camera.Orthographic.Height := ViewHeight;
-
-      Viewport.Camera.Orthographic.Scale := Extents.Size.X / ViewWidth;
+      Viewport.FitRect(Extents.Size.X, Extents.Size.Y, Viewport.ParentRect);
+//      Viewport.Camera.Orthographic.Scale := (2 * (Extents.Size.Y / Extents.Size.X)) / Viewport.ParentRect.Width;
+//      Viewport.Camera.Orthographic.Scale := (Extents.Size.Y / Extents.Size.X) / ViewWidth;
+//      Viewport.Camera.Orthographic.Scale := 1 / Viewport.ParentRect.Width;
+      Viewport.Camera.Orthographic.Width := Extents.Size.X;
+      Viewport.Camera.Orthographic.Height := Extents.Size.Y;
 
       Info := 'ViewScale : ' + FloatToStr(ViewScale) + LineEnding +
         'BB : ' + Scene.BoundingBox.Data[0].ToString + ' - ' + Scene.BoundingBox.Data[1].ToString + LineEnding +
@@ -353,8 +295,9 @@ begin
         'Rotation : ' + FloatToStr((CameraRotation / CameraRotationSteps) * 360) + LineEnding +
         'Translation : ' + Scene.Translation.ToString;
 
-      InfoLabel.Caption := Info;
-      WriteLnLog(Info);
+//      InfoLabel.Caption := Info;
+//      WriteLnLog(Info);
+WriteLnLog('LoadScene : ' + Viewport.EffectiveRect.ToString + ' : Extents : ' + Extents.Size.ToString + ' : ' + FloatToStr(Viewport.Camera.Orthographic.Scale)); // SB
 
       {$ifndef cgeapp}
       CastleForm.MenuDebug.Checked := Debug.Exists;
@@ -369,6 +312,8 @@ begin
     end;
   finally
     // Do something if required
+    WriteLnLog('Scene created -> ReFlow ');
+    Reflow;
   end;
 
 end;
@@ -387,46 +332,52 @@ begin
 end;
 
 procedure TCastleApp.Resize;
+var
+  ScaledRect: TFloatRectangle;
 begin
   inherited;
-//  WriteLnLog('Resize = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   if Assigned(Viewport) then
-    Reflow;
+    begin
+{
+      ScaledRect := ViewPane.EffectiveRect.FitInside(EffectiveRect);
+      ViewPane.Left := ScaledRect.Left;
+      ViewPane.Bottom := ScaledRect.Bottom;
+      ViewPane.Width := ScaledRect.Width;
+      ViewPane.Height := ScaledRect.Height;
+}
+      if Assigned(Scene) then
+        begin
+          Reflow;
+        end;
+    end;
 end;
 
 procedure TCastleApp.Reflow;
 var
-  DesiredAspect: Single;
-  ActualAspect: Single;
-//  Extents: TExtents;
+  Extents: TExtents;
+  InnerRect: TFloatRectangle;
 begin
-{
-  Extents := Viewport.CalcAngles(Scene);
-  ViewWidth := Extents.Size.X;
-  ViewHeight := Extents.Size.Y * (Extents.Size.Y / Extents.Size.X);
-
-  Viewport.Camera.Orthographic.Width := ViewWidth;
-  Viewport.Camera.Orthographic.Height := ViewHeight;
-}
-  DesiredAspect := ViewWidth / ViewHeight;
-  ActualAspect := EffectiveWidth / EffectiveHeight;
-
-  if DesiredAspect <= ActualAspect then // Landscape
+  exit;
+  if Assigned(Viewport) and Assigned(Scene) then
     begin
-      Viewport.Height := EffectiveHeight;
-      Viewport.Width := (EffectiveHeight * DesiredAspect);
-      ViewScale := Viewport.Width / ViewWidth;
+      ViewPane.FitRect(ViewPane.EffectiveRect, EffectiveRect);
+      Viewport.FitRect(Viewport.EffectiveRect, Viewport.ParentRect);
+      Extents := Viewport.CalcAngles(Scene);
+      if Extents.Pixels.X > 0 then
+        begin
+          InnerRect := FloatRectangle(0, 0, Extents.Size.X, Extents.Size.Y);
+
+          WriteLnLog('REFLOW : ' + Viewport.EffectiveRect.ToString + ' : Extents : ' + Extents.Size.ToString); // SB
+//          ScaledRect := InnerRect.FitInside(ScaledRect);
+WriteLnLog('Reflow : ' + Viewport.EffectiveRect.ToString); // SB
+        end
+      else WriteLnLog('Bad Extents : ' + Extents.Pixels.ToString + LineEnding);
     end
-  else  // Portrait
-    begin
-      Viewport.Width := EffectiveWidth;
-      Viewport.Height := (EffectiveWidth / DesiredAspect);
-      ViewScale := Viewport.Height / ViewHeight;
-    end;
+  else WriteLnLog('Viewport or Scene not set' + LineEnding);
 
-  Viewport.Left := Trunc((EffectiveWidth - Viewport.Width) / 2);
-  Viewport.Bottom := Trunc((EffectiveHeight - Viewport.Height) / 2);
 end;
+
+
 
 procedure TCastleApp.BeforeRender;
 begin
@@ -458,61 +409,6 @@ begin
   Result := inherited;
 end;
 
-procedure TCastleViewportHelper.ViewFromRadius(const ARadius: Single; const AElevation: Single; const ATheta: Single);
-begin
-  ViewFromRadius(ARadius, Vector3(sqrt(ARadius) * Cos(ATheta), AElevation, sqrt(ARadius) * Sin(ATheta)));
-end;
-
-procedure TCastleViewportHelper.ViewFromRadius(const ARadius: Single; const ADirection: TVector3);
-begin
-  Camera.Up := Vector3(0, 1, 0);
-  Camera.Direction := ADirection;
-  Camera.Position  := ARadius * -ADirection.Normalize;
-end;
-
-function TCastleSceneHelper.Normalize: TVector3;
-begin
-  Result := TVector3.Zero;
-  if not(Self = nil) then
-    begin
-    if not BoundingBox.IsEmptyOrZero then
-      begin
-        if BoundingBox.MaxSize > 0 then
-          begin
-            Result := BoundingBox.Size;
-            Center := Vector3(Min(BoundingBox.Data[0].X, BoundingBox.Data[1].X) + (BoundingBox.SizeX / 2),
-                              Min(BoundingBox.Data[0].Y, BoundingBox.Data[1].Y) + (BoundingBox.SizeY / 2),
-                              Min(BoundingBox.Data[0].Z, BoundingBox.Data[1].Z) + (BoundingBox.SizeZ / 2));
-            Scale := Vector3(2 / BoundingBox.MaxSize,
-                             2 / BoundingBox.MaxSize,
-                             2 / BoundingBox.MaxSize);
-
-            WriteLnLog( 'BB' + BoundingBox.Data[0].ToString + ' - ' + BoundingBox.Data[1].ToString );
-            Translation := -Center;
-          end;
-      end;
-    end;
-end;
-
-procedure TUIStateHelper.CreateLabel(var objLabel: TCastleLabel; const Line: Integer; const BottomUp: Boolean = True; RightAlign: Boolean = False);
-begin
-  objLabel := TCastleLabel.Create(Self);
-  objLabel.Padding := 5;
-  objLabel.Color := White;
-  objLabel.Frame := True;
-  objLabel.FrameColor := Black;
-  objLabel.Anchor(hpLeft, 10);
-  if RightAlign then
-    objLabel.Anchor(hpRight, -10)
-  else
-    objLabel.Anchor(hpLeft, 10);
-  if BottomUp then
-    objLabel.Anchor(vpBottom, 10 + (Line * 35))
-  else
-    objLabel.Anchor(vpTop, -(10 + (Line * 35)));
-  InsertFront(objLabel);
-end;
-
 procedure TCastleApp.ShowAppMessage(const AMsg: String);
 begin
   WriteLnLog(AMsg);
@@ -525,6 +421,7 @@ var
 begin
   if not (Scene = nil) then
     begin
+      InfoNote.Show('Creating Sprite');
       Sprite := CreateSpriteImage(Scene, SpriteWidth * OverSample, SpriteHeight * OverSample, UseTransparency);
       if not(Sprite = nil) then
         begin
@@ -535,6 +432,7 @@ begin
           SName := FileNameAutoInc('grab_%4.4d.png');
           SaveImage(Sprite, SName);
           FreeAndNil(Sprite);
+          InfoNote.Show('Saved Sprite : ' + SName);
         end;
     end;
 end;

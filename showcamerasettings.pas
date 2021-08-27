@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, CastleViewport;
+  ExtCtrls, CastleViewport, MiscHelpers;
 
 type
 
@@ -113,8 +113,8 @@ begin
           Label31.Caption := FormatFloat('##0.00000', Extents.Min.Y);
           Label32.Caption := FormatFloat('##0.00000', Extents.Size.Y);
 
-          Label34.Caption := FormatFloat('##0.00000', Extents.Pixels.X);
-          Label36.Caption := FormatFloat('##0.00000', Extents.Pixels.Y);
+          Label34.Caption := FormatFloat('####0', Extents.Pixels.X);
+          Label36.Caption := FormatFloat('####0', Extents.Pixels.Y);
           Label38.Caption := FormatFloat('##0.00000', Extents.Aspect);
           Label40.Caption := FormatFloat('##0.00000', AViewport.Camera.Orthographic.Scale);
         end;

@@ -135,7 +135,7 @@ end;
 procedure TCastleForm.ToolButton3Click(Sender: TObject);
 begin
   With CastleApp do
-    GrabSprite(512, 512, 8);
+    GrabSprite(512, 512, 1);
 end;
 
 procedure TCastleForm.ToolButton6Click(Sender: TObject);
@@ -149,7 +149,13 @@ var
 begin
   campos := TrackBar1.Position / (TrackBar1.Max + 1);
   campos := 1-(1/(1-campos));
-  CastleApp.CameraElevation := campos;
+  if campos < -10000 then
+    campos := -9999;
+  if Assigned(CastleApp.Viewport) and not(CastleApp.SettingUp) then
+    begin
+      CastleApp.CameraElevation := campos;
+//      CastleApp.Reflow;
+    end;
 end;
 
 procedure TCastleForm.FormDestroy(Sender: TObject);
@@ -158,6 +164,8 @@ end;
 
 procedure TCastleForm.WindowOpen(Sender: TObject);
 begin
+  Width := 640 + TrackBar1.Width;
+  Height := 640 + ToolBar1.Height;
   TCastleControlBase.MainControl := Window;
   CastleApp := TCastleApp.Create(Window);
   TUIState.Current := CastleApp;
