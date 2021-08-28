@@ -13,7 +13,7 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, GUIInitialization, castle_components, castle_base, ShowCameraSettings,
-  MiscHelpers
+  MiscHelpers, RGBAlphaImageHelp
   { you can add units after this };
 
 {$R *.res}

@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="5">
+    <Units Count="7">
       <Unit0>
         <Filename Value="TilelyLaz.pas"/>
         <IsPartOfProject Value="True"/>
@@ -67,6 +67,15 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="MiscHelpers"/>
       </Unit4>
+      <Unit5>
+        <Filename Value="rgbalphaimagehelp.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="RGBAlphaImageHelp"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="jsontools.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

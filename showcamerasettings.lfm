@@ -60,8 +60,8 @@ object CameraForm: TCameraForm
       Left = 9
       Height = 15
       Top = 31
-      Width = 15
-      Caption = 'Up'
+      Width = 43
+      Caption = 'Position'
       ParentColor = False
     end
     object Label6: TLabel
@@ -136,8 +136,8 @@ object CameraForm: TCameraForm
       Left = 9
       Height = 15
       Top = 79
-      Width = 43
-      Caption = 'Position'
+      Width = 15
+      Caption = 'Up'
       ParentColor = False
     end
     object Label14: TLabel

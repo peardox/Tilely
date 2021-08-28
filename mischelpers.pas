@@ -27,6 +27,7 @@ type
   public
     procedure ViewFromRadius(const ARadius: Single; const ADirection: TVector3);
     procedure ViewFromRadius(const ARadius: Single; const AElevation: Single; const ATheta: Single);
+    procedure ViewFromRadiusZ(const ARadius: Single; const ADirection: TVector3);
     function CalcAngles(const AScene: TCastleScene): TExtents;
   end;
 
@@ -52,12 +53,13 @@ type
   end;
 
 implementation
+uses MainGameUnit;
 
 { TCastleViewportHelper }
 
 procedure TCastleViewportHelper.ViewFromRadius(const ARadius: Single; const AElevation: Single; const ATheta: Single);
 begin
-  ViewFromRadius(ARadius, Vector3(sqrt(ARadius) * Cos(ATheta), AElevation, sqrt(ARadius) * Sin(ATheta)));
+    ViewFromRadius(ARadius, Vector3(sqrt(ARadius) * Cos(ATheta), AElevation, sqrt(ARadius) * Sin(ATheta)));
 end;
 
 procedure TCastleViewportHelper.ViewFromRadius(const ARadius: Single; const ADirection: TVector3);
@@ -65,6 +67,14 @@ begin
   Camera.Up := Vector3(0, 1, 0);
   Camera.Direction := ADirection;
   Camera.Position  := ARadius * -ADirection.Normalize;
+end;
+
+procedure TCastleViewportHelper.ViewFromRadiusZ(const ARadius: Single; const ADirection: TVector3);
+begin
+  Camera.Up := Vector3(0, 0, -1);
+  Camera.Direction := ADirection;
+  Camera.Position  := ARadius * -ADirection.Normalize;
+  CastleApp.ViewPane.Color := Vector4(0, 0, 1, 1);
 end;
 
 function TCastleViewportHelper.CalcAngles(const AScene: TCastleScene): TExtents;

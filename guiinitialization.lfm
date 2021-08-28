@@ -12,10 +12,10 @@ object CastleForm: TCastleForm
   Position = poDefault
   LCLVersion = '2.0.10.0'
   object Window: TCastleControlBase
-    Left = 0
+    Left = 170
     Height = 196
     Top = 24
-    Width = 295
+    Width = 125
     Align = alClient
     Options = []
     TabOrder = 0
@@ -39,6 +39,7 @@ object CastleForm: TCastleForm
       Top = 2
       Caption = 'Open File(s)'
       ImageIndex = 8
+      OnClick = ToolButton4Click
       ParentShowHint = False
       ShowHint = True
     end
@@ -104,6 +105,24 @@ object CastleForm: TCastleForm
     Reversed = True
     Align = alRight
     TabOrder = 2
+  end
+  object NavPanel: TPanel
+    Left = 0
+    Height = 196
+    Top = 24
+    Width = 170
+    Align = alLeft
+    ClientHeight = 196
+    ClientWidth = 170
+    TabOrder = 3
+    object TreeView1: TTreeView
+      Left = 1
+      Height = 194
+      Top = 1
+      Width = 168
+      Align = alClient
+      TabOrder = 0
+    end
   end
   object MainMenu1: TMainMenu
     Left = 37

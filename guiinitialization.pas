@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, Math, CastleUIState, Forms, Controls, Graphics, Dialogs,
-  Menus, ComCtrls, CastleControl, CastleDialogs, CastleControls, CastleColors,
-  CastleUIControls, CastleTriangles, CastleShapes, CastleVectors,
+  Menus, ComCtrls, ExtCtrls, CastleControl, CastleDialogs, CastleControls,
+  CastleColors, CastleUIControls, CastleTriangles, CastleShapes, CastleVectors,
   CastleSceneCore, CastleScene, CastleTransform, CastleViewport, CastleCameras,
   X3DNodes, X3DFields, X3DTIme, CastleImages, CastleGLImages,
   CastleApplicationProperties, CastleLog, MainGameUnit, CastleTimeUtils,
@@ -25,6 +25,7 @@ type
     MenuOpen: TMenuItem;
     MenuDebug: TMenuItem;
     MenuInfo: TMenuItem;
+    NavPanel: TPanel;
     ToolBar1: TToolBar;
     ToolButton1: TToolButton;
     ToolButton2: TToolButton;
@@ -33,6 +34,7 @@ type
     ToolButton5: TToolButton;
     ToolButton6: TToolButton;
     TrackBar1: TTrackBar;
+    TreeView1: TTreeView;
     Window: TCastleControlBase;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -42,10 +44,12 @@ type
     procedure ToolButton1Click(Sender: TObject);
     procedure ToolButton2Click(Sender: TObject);
     procedure ToolButton3Click(Sender: TObject);
+    procedure ToolButton4Click(Sender: TObject);
     procedure ToolButton6Click(Sender: TObject);
     procedure TrackBar1Change(Sender: TObject);
     procedure WindowClose(Sender: TObject);
     procedure WindowOpen(Sender: TObject);
+    procedure OpenModel;
   end;
 
 var
@@ -89,6 +93,11 @@ begin
 end;
 
 procedure TCastleForm.MenuOpenClick(Sender: TObject);
+begin
+  OpenModel;
+end;
+
+procedure TCastleForm.OpenModel;
 var
   i: Integer;
 begin
@@ -122,20 +131,39 @@ end;
 
 procedure TCastleForm.ToolButton1Click(Sender: TObject);
 begin
-  With CastleApp do
-    CameraRotation := CameraRotation - 1;
+  with CastleApp do
+    begin
+      if Assigned(Viewport) and not(SettingUp) then
+        begin
+          CameraRotation := CameraRotation - 1;
+          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Reflow;
+        end;
+    end;
 end;
 
 procedure TCastleForm.ToolButton2Click(Sender: TObject);
 begin
-  With CastleApp do
-    CameraRotation := CameraRotation + 1;
+  with CastleApp do
+    begin
+      if Assigned(Viewport) and not(SettingUp) then
+        begin
+          CameraRotation := CameraRotation + 1;
+          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Reflow;
+        end;
+    end;
 end;
 
 procedure TCastleForm.ToolButton3Click(Sender: TObject);
 begin
   With CastleApp do
     GrabSprite(512, 512, 1);
+end;
+
+procedure TCastleForm.ToolButton4Click(Sender: TObject);
+begin
+  OpenModel;
 end;
 
 procedure TCastleForm.ToolButton6Click(Sender: TObject);
@@ -151,10 +179,14 @@ begin
   campos := 1-(1/(1-campos));
   if campos < -10000 then
     campos := -9999;
-  if Assigned(CastleApp.Viewport) and not(CastleApp.SettingUp) then
+  with CastleApp do
     begin
-      CastleApp.CameraElevation := campos;
-//      CastleApp.Reflow;
+      if Assigned(Viewport) and not(SettingUp) then
+        begin
+          CameraElevation := campos;
+          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Reflow;
+        end;
     end;
 end;
 
@@ -164,8 +196,8 @@ end;
 
 procedure TCastleForm.WindowOpen(Sender: TObject);
 begin
-  Width := 640 + TrackBar1.Width;
-  Height := 640 + ToolBar1.Height;
+  Width := 640 + TrackBar1.Width + NavPanel.Width;
+  Height := 640 + ToolBar1.Height + MainMenu1.Height;
   TCastleControlBase.MainControl := Window;
   CastleApp := TCastleApp.Create(Window);
   TUIState.Current := CastleApp;

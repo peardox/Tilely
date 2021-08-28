@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, CastleViewport, MiscHelpers;
+  ExtCtrls, CastleCameras, CastleViewport, CastleQuaternions,
+  MiscHelpers;
 
 type
 
@@ -82,25 +83,27 @@ end;
 
 procedure TCameraForm.ShowStats(const AViewport: TCastleViewport);
 var
+  Q: TQuaternion;
   Extents: TExtents;
 begin
   With CastleApp do
     begin
       if Assigned(Scene) and Assigned(AViewport) then
         begin
+          Q := OrientationQuaternionFromDirectionUp(AViewport.Camera.Direction, AViewport.Camera.Up);
           Extents := AViewport.CalcAngles(Scene);
 
-          Label6.Caption  := FormatFloat('##0.00000', AViewport.Camera.Up.X);
-          Label7.Caption  := FormatFloat('##0.00000', AViewport.Camera.Up.Y);
-          Label8.Caption  := FormatFloat('##0.00000', AViewport.Camera.Up.Z);
+          Label6.Caption  := FormatFloat('##0.00000', AViewport.Camera.Position.X);
+          Label7.Caption  := FormatFloat('##0.00000', AViewport.Camera.Position.Y);
+          Label8.Caption  := FormatFloat('##0.00000', AViewport.Camera.Position.Z);
 
           Label10.Caption := FormatFloat('##0.00000', AViewport.Camera.Direction.X);
           Label11.Caption := FormatFloat('##0.00000', AViewport.Camera.Direction.Y);
           Label12.Caption := FormatFloat('##0.00000', AViewport.Camera.Direction.Z);
 
-          Label14.Caption := FormatFloat('##0.00000', AViewport.Camera.Position.X);
-          Label15.Caption := FormatFloat('##0.00000', AViewport.Camera.Position.Y);
-          Label16.Caption := FormatFloat('##0.00000', AViewport.Camera.Position.Z);
+          Label14.Caption := FormatFloat('##0.00000', AViewport.Camera.Up.X);
+          Label15.Caption := FormatFloat('##0.00000', AViewport.Camera.Up.Y);
+          Label16.Caption := FormatFloat('##0.00000', AViewport.Camera.Up.Z);
 
           Label18.Caption := FormatFloat('##0.00000', CameraElevation);
           Label20.Caption := FormatFloat('##0', (CameraRotation / CameraRotationSteps) * 360);
