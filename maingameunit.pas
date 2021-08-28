@@ -39,8 +39,6 @@ type
     fCameraRotationSteps: Integer;
     fCameraElevation: Single;
     ViewScale: Single;
-    ViewWidth: Single;
-    ViewHeight: Single;
     OriginalSize: TVector3;
     OriginalScale: Single;
     OriginalWidth: Single;
@@ -58,6 +56,9 @@ type
     InfoNote: TCastleNotifications;
     SettingUp: Boolean;
     LastWidth: Single;
+    ViewWidth: Single;
+    ViewHeight: Single;
+    SceneTilt: Integer;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Start; override; // TUIState
@@ -66,7 +67,7 @@ type
     procedure Reflow;
     procedure LoadUI;
     procedure LoadScene(const AFile: String);
-    function CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False): TCastleImage;
+    function CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False; const useMainViewport: Boolean = True): TCastleImage;
     procedure ShowAppMessage(const AMsg: String);
     procedure GrabSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True);
     property CameraRotation: Integer read fCameraRotation write setCameraRotation;
@@ -94,13 +95,18 @@ begin
   inherited;
 //  LogTextureCache := True;
   ViewScale := 1;
-  ViewWidth := 512;
-  ViewHeight := 512;
+  ViewWidth := 64;
+  ViewHeight := 64;
   SettingUp := False;
+  SceneTilt := 0;
   StretchMultiplier := 1;
   CameraRotationSteps := 8;
-  CameraRotation := 5;
-  CameraElevation := -0.81625; // -sqrt(2); //
+  CameraRotation := 1;
+  CameraElevation := 1; // -0.81625; // -sqrt(2); //
+  {$ifndef cgeapp}
+  CastleForm.CurrentProjection := CastleForm.PopupMenu1.Items[3].Caption;
+  CastleForm.PopupMenu1.Items[3].Checked := True;
+  {$endif}
   OriginalSize := TVector3.Zero;
   FullSize := True;
 //  IVC := TTexturesVideosCache.Create;
@@ -117,10 +123,10 @@ begin
   WriteLnLog('BootStrap = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   LoadUI;
 //  LoadScene('castle-data:/tests/brick_tent.gltf');
-//  LoadScene('castle-data:/tests/brick_tent_8.glb');
-//  LoadScene('castle-data:/tests/seperates/brick_tent_8.obj');
-  LoadScene('castle-data:/tests/isocam.glb');
-//  LoadScene('castle-data:/tests/oblique.glb');
+//  LoadScene('castle-data:/tests/isocam.glb');
+//  LoadScene('castle-data:/tests/up.glb');
+//  LoadScene('castle-data:/tests/sword.glb');
+  LoadScene('castle-data:/tests/oblique.x3dv');
 //  LoadScene('C:\Assets\Creative Trio\gltf\bridge\stone\Bridge_11.glb');
 //  LoadScene('C:\Assets\ZerinLabs\Retro-Dungeon-EnviroKit\gltf\verA\floor_A.gltf');
 //  LoadScene('C:\Assets\ZerinLabs\Retro-Dungeon-EnviroKit\gltf\verA\floor_B.gltf');
@@ -130,7 +136,10 @@ begin
 //  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Props/Path_Straight.glb');
 //  LoadScene('castle-data:/medieval_objects/archeryrange.glb');
 //  LoadScene('castle-data:/dungeon_tiles/floorDecoration_wood.glb');
-//  GrabSprite(256, 256, 8);
+
+  {$ifndef cgeapp}
+  CastleForm.UpdateCaption;
+  {$endif}
 end;
 
 procedure TCastleApp.setCameraRotation(const AValue: Integer);
@@ -220,25 +229,19 @@ begin
   ViewGrid.Stretch := True;
   ViewGrid.FullSize := True;
   ViewPane.InsertBack(ViewGrid);
-
   ViewGrid.Image :=  MakeTransparentLayerGrid(Trunc(ViewWidth), Trunc(ViewHeight), Trunc(ViewPane.Width), Trunc(ViewPane.Height), 8);
-//  ViewGrid.FitRect(ViewWidth, ViewHeight, ViewGrid.ParentRect);
-{
-  ViewGrid.Left := Viewport.Left;
-  ViewGrid.Bottom := Viewport.Bottom;
-  ViewGrid.Width := Viewport.Width;
-  ViewGrid.Height := Viewport.Height;
-}
+
   CreateLabel(InfoLabel, 0);
   CreateNotification(InfoNote, 0, False);
   InfoLabel.Exists := False;
 end;
 
 procedure TCastleApp.LoadScene(const AFile: String);
-var
-  Extents: TExtents;
-  Info: String;
 begin
+  {$ifndef cgeapp}
+  CastleForm.CurrentFile := AFile;
+  {$endif}
+
   if Assigned(Debug) then
     FreeAndNil(Debug);
   if Assigned(Scene) then
@@ -391,7 +394,7 @@ begin
 end;
 
 
-function TCastleApp.CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False): TCastleImage;
+function TCastleApp.CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False; const useMainViewport: Boolean = True): TCastleImage;
 var
   SourceViewport: TCastleViewport;
   ViewportRect: TRectangle;
@@ -421,8 +424,8 @@ begin
 
           SourceViewport.AutoCamera := False;
           SourceViewport.Setup2D;
-          SourceViewport.Camera.ProjectionType := Viewport.Camera.ProjectionType;
-          SourceViewport.Camera.Orthographic.Origin := Viewport.Camera.Orthographic.Origin;
+          SourceViewport.Camera.ProjectionType := ptOrthographic;
+          SourceViewport.Camera.Orthographic.Origin := Vector2(0.5, 0.5);
 
           SourceViewport.Width := TextureWidth;
           SourceViewport.Height := TextureHeight;
@@ -438,7 +441,14 @@ begin
           Extents := SourceViewport.CalcAngles(SourceScene);
           SourceViewport.Camera.Orthographic.Scale := Extents.Size.X / TextureWidth;
 
-          SourceViewport.Items := ViewPort.Items;
+          if useMainViewport then { Possibly use clone if desired }
+            SourceViewport.Items := ViewPort.Items
+          else
+            begin
+              SourceViewport.Items.UseHeadlight := hlMainScene;
+              SourceViewport.Items.Add(SourceScene);
+              SourceViewport.Items.MainScene := SourceScene;
+            end;
 
           HeightAdjust := Extents.Size.Y / Extents.Size.X;
           SourceViewport.Height := Trunc(TextureHeight * HeightAdjust);
@@ -513,10 +523,11 @@ begin
   Extents := NewVP.CalcAngles(SourceScene);
   HeightAdjust := Extents.Size.Y / Extents.Size.X;
 
-  OriginalScale := Extents.Size.X / (VWidth / HeightAdjust);
+  OriginalScale := Extents.Size.Y / (VWidth * HeightAdjust);
   NewVP.Camera.Orthographic.Scale := OriginalScale;
 
-  NewVP.Width := Trunc(VWidth / HeightAdjust);
+//  NewVP.Width := Trunc(VWidth / HeightAdjust);
+  NewVP.Height := Trunc(VWidth * HeightAdjust);
 
   if not (StretchMultiplier = 1) then
     begin
@@ -527,6 +538,8 @@ begin
 
   OriginalWidth := NewVP.Width;
   LastWidth := OriginalWidth;
+
+//  WriteLnLog('OriginalWidth : ' + FloatToStr(OriginalWidth));
 
   NewVP.Items.UseHeadlight := hlMainScene;
   NewVP.Items.Add(SourceScene);

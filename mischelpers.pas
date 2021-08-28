@@ -65,8 +65,8 @@ end;
 procedure TCastleViewportHelper.ViewFromRadius(const ARadius: Single; const ADirection: TVector3);
 begin
   Camera.Up := Vector3(0, 1, 0);
-  Camera.Direction := ADirection;
-  Camera.Position  := ARadius * -ADirection.Normalize;
+  Camera.Direction := -ADirection;
+  Camera.Position  := ARadius * ADirection.Normalize;
 end;
 
 procedure TCastleViewportHelper.ViewFromRadiusZ(const ARadius: Single; const ADirection: TVector3);
