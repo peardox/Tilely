@@ -96,9 +96,9 @@ object CastleForm: TCastleForm
       end
       object ToolButton1: TToolButton
         Left = 47
-        Hint = 'Rotate Left'
+        Hint = 'Rotate Clockwise'
         Top = 2
-        Caption = 'Rotate Left'
+        Caption = 'Rotate Clockwise'
         ImageIndex = 0
         OnClick = RotateLeftClick
         ParentShowHint = False
@@ -106,9 +106,9 @@ object CastleForm: TCastleForm
       end
       object ToolButton2: TToolButton
         Left = 70
-        Hint = 'Rotate Right'
+        Hint = 'Rotate Anti-Clockwise'
         Top = 2
-        Caption = 'Rotate Right'
+        Caption = 'Rotate Anti-Clockwise'
         ImageIndex = 1
         OnClick = RotateRightClick
         ParentShowHint = False

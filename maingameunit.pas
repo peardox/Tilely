@@ -102,10 +102,14 @@ begin
   StretchMultiplier := 1;
   CameraRotationSteps := 8;
   CameraRotation := 1;
-  CameraElevation := 1; // -0.81625; // -sqrt(2); //
+  CameraElevation := 1; // 0.81625; // sqrt(2); //
   {$ifndef cgeapp}
-  CastleForm.CurrentProjection := CastleForm.PopupMenu1.Items[3].Caption;
-  CastleForm.PopupMenu1.Items[3].Checked := True;
+  with CastleForm do
+    begin
+      ViewID := 3;
+      CurrentProjection := PopupMenu1.Items[ViewID].Caption;
+      PopupMenu1.Items[ViewID].Checked := True;
+    end;
   {$endif}
   OriginalSize := TVector3.Zero;
   FullSize := True;
@@ -137,9 +141,6 @@ begin
 //  LoadScene('castle-data:/medieval_objects/archeryrange.glb');
 //  LoadScene('castle-data:/dungeon_tiles/floorDecoration_wood.glb');
 
-  {$ifndef cgeapp}
-  CastleForm.UpdateCaption;
-  {$endif}
 end;
 
 procedure TCastleApp.setCameraRotation(const AValue: Integer);
@@ -328,6 +329,10 @@ begin
           Viewport.Camera.Orthographic.Scale := OriginalScale * (OriginalWidth / Viewport.Width);;
           LastWidth := Viewport.Width;
         end;
+      {$ifndef cgeapp}
+      CastleForm.UpdateCaption;
+      {$endif}
+
     end
   else WriteLnLog('Viewport or Scene not set' + LineEnding);
 

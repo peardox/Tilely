@@ -72,10 +72,11 @@ type
     procedure OpenModel;
     procedure ShowDebug;
     procedure UpdateCaption;
-    procedure SetViewpoint(const ViewID: Integer);
+    procedure SetViewpoint;
   public
     CurrentFile: String;
     CurrentProjection: String;
+    ViewID: Integer;
   end;
 
 var
@@ -114,8 +115,6 @@ begin
 end;
 
 procedure TCastleForm.ViewMenuClick(Sender: TObject);
-var
-  ViewID: Integer;
 begin
   with Sender as TMenuItem do
     begin
@@ -123,8 +122,8 @@ begin
       ViewID := Integer(Tag);
     end;
 
-  SetViewpoint(ViewID);
-  UpdateCaption;
+  SetViewpoint;
+//  UpdateCaption;
 end;
 
 procedure TCastleForm.UpdateCaption;
@@ -136,7 +135,7 @@ begin
     ' degrees rotation';
 end;
 
-procedure TCastleForm.SetViewpoint(const ViewID: Integer);
+procedure TCastleForm.SetViewpoint;
 var
   i: Integer;
 begin
@@ -223,7 +222,6 @@ begin
           CurrentFile := CastleOpenDialog1.Files[0];
           WriteLnLog('Opening ' + CurrentFile);
           CastleApp.LoadScene(CurrentFile);
-          UpdateCaption;
         end
       else
         begin
