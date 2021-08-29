@@ -20,9 +20,26 @@ uses
   CastleTextureImages, CastleCompositeImage, CastleBoxes,
   CastleApplicationProperties, CastleLog, CastleTimeUtils,
   CastleFilesUtils, CastleKeysMouse, CastleNotifications,
-  RGBAlphaImageHelp, MiscHelpers;
+  RGBAlphaImageHelp, MiscHelpers, CastleURIUtils;
 
 type
+  { TSpritelyModel }
+
+  TSpritelyModel = class(TComponent)
+  private
+    fFileName: String;
+    fModelName: String;
+    fScene: TCastleScene;
+    fRealSize: TVector3;
+  public
+    property FileName: String read fFileName write fFileName;
+    property ModelName: String read fModelName write fModelName;
+    property Scene: TCastleScene read fScene write fScene;
+    property RealSize: TVector3 read fRealSize write fRealSize;
+    constructor Create(AOwner: TComponent); override;
+    constructor Create(AOwner: TComponent; const AFile: String; AScene: TCastleScene; ASize: TVector3);
+  end;
+
   { TCastleApp }
 
   TCastleApp = class(TUIState)
@@ -39,7 +56,6 @@ type
     fCameraRotationSteps: Integer;
     fCameraElevation: Single;
     ViewScale: Single;
-    OriginalSize: TVector3;
     OriginalScale: Single;
     OriginalWidth: Single;
     StretchMultiplier: Single;
@@ -47,6 +63,7 @@ type
     procedure setCameraRotationSteps(const AValue: Integer);
     procedure setCameraElevation(const AValue: Single);
   public
+    ViewUI: TCastleRectangleControl;
     ViewPane: TCastleRectangleControl;
     ViewBack: TCastleRectangleControl;
     Viewport: TCastleViewport;
@@ -59,6 +76,7 @@ type
     ViewWidth: Single;
     ViewHeight: Single;
     SceneTilt: Integer;
+    OriginalSize: TVector3;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Start; override; // TUIState
@@ -66,7 +84,7 @@ type
     procedure BootStrap(Sender: TObject);
     procedure Reflow;
     procedure LoadUI;
-    procedure LoadScene(const AFile: String);
+    function LoadScene(const AFile: String): TCastleScene;
     function CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False; const useMainViewport: Boolean = True): TCastleImage;
     procedure ShowAppMessage(const AMsg: String);
     procedure GrabSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True);
@@ -75,6 +93,8 @@ type
     property CameraElevation: Single read fCameraElevation write setCameraElevation;
     procedure ShowInfo;
     function CreateView(const SourceScene: TCastleScene; const VWidth: Cardinal; const VHeight: Cardinal): TCastleViewport;
+    procedure AddDebugBox(const AScene: TCastleScene);
+    procedure SynchTrackbar;
   end;
 
 var
@@ -88,6 +108,23 @@ uses AppInitialization;
 uses GUIInitialization, ShowCameraSettings;
 {$endif}
 
+{ TSpritelyModel }
+
+constructor TSpritelyModel.Create(AOwner: TComponent);
+begin
+  inherited;
+end;
+
+constructor TSpritelyModel.Create(AOwner: TComponent; const AFile: String; AScene: TCastleScene; ASize: TVector3);
+begin
+  Create(AOwner);
+
+  fFileName := AFile;
+  fModelName := StripExtension(ExtractURIName(AFile));
+  fScene := AScene;
+  fRealSize := ASize;
+end;
+
 { TCastleApp }
 
 constructor TCastleApp.Create(AOwner: TComponent);
@@ -95,18 +132,18 @@ begin
   inherited;
 //  LogTextureCache := True;
   ViewScale := 1;
-  ViewWidth := 64;
-  ViewHeight := 64;
+  ViewWidth := 256;
+  ViewHeight := 256;
   SettingUp := False;
   SceneTilt := 0;
   StretchMultiplier := 1;
   CameraRotationSteps := 8;
   CameraRotation := 1;
-  CameraElevation := 1; // 0.81625; // sqrt(2); //
+  CameraElevation := 0.81625; // sqrt(2); //
   {$ifndef cgeapp}
   with CastleForm do
     begin
-      ViewID := 3;
+      ViewID := 2;
       CurrentProjection := PopupMenu1.Items[ViewID].Caption;
       PopupMenu1.Items[ViewID].Checked := True;
     end;
@@ -126,11 +163,13 @@ procedure TCastleApp.BootStrap(Sender: TObject);
 begin
   WriteLnLog('BootStrap = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   LoadUI;
+//  LoadScene('castle-data:/icon.png');
+
 //  LoadScene('castle-data:/tests/brick_tent.gltf');
 //  LoadScene('castle-data:/tests/isocam.glb');
 //  LoadScene('castle-data:/tests/up.glb');
 //  LoadScene('castle-data:/tests/sword.glb');
-  LoadScene('castle-data:/tests/oblique.x3dv');
+//  LoadScene('castle-data:/tests/oblique.glb');
 //  LoadScene('C:\Assets\Creative Trio\gltf\bridge\stone\Bridge_11.glb');
 //  LoadScene('C:\Assets\ZerinLabs\Retro-Dungeon-EnviroKit\gltf\verA\floor_A.gltf');
 //  LoadScene('C:\Assets\ZerinLabs\Retro-Dungeon-EnviroKit\gltf\verA\floor_B.gltf');
@@ -138,6 +177,10 @@ begin
 //  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Props/Crate.glb');
 //  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Props/Path_Square.glb');
 //  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Props/Path_Straight.glb');
+//  LoadScene('castle-data:/Models/Quaternius/Ultimate Modular Ruins Pack - Aug 2021/Floor_Squares.glb');
+//  LoadScene('castle-data:/Models/Quaternius/Ultimate Modular Ruins Pack - Aug 2021/Floor_Tree.glb');
+//  LoadScene('castle-data:/Models/Quaternius/Ultimate Modular Ruins Pack - Aug 2021/Stairs.glb');
+//  LoadScene('castle-data:/Models/Quaternius/Ultimate Modular Ruins Pack - Aug 2021/Stairs_2.glb');
 //  LoadScene('castle-data:/medieval_objects/archeryrange.glb');
 //  LoadScene('castle-data:/dungeon_tiles/floorDecoration_wood.glb');
 
@@ -220,33 +263,52 @@ begin
   WriteLnLog('LoadUI Effective = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   WriteLnLog('LoadUI EffectiveRect = ' + EffectiveRect.ToString);
 
-  ViewPane := TCastleRectangleControl.Create({$ifndef cgeapp}CastleForm.{$endif}Window);
-  ViewPane.FitRect(ViewWidth, ViewHeight, EffectiveRect);
-  ViewPane.Color := Vector4(1,1,1,1);
-  InsertFront(ViewPane);
+  ViewUI := TCastleRectangleControl.Create(Self);
+  ViewUI.SetRect(EffectiveRect);
+  ViewUI.Color := Vector4(0.0, 0.0, 0.0, 1.0);
+  InsertFront(ViewUI);
 
-  ViewGrid := TCastleImageControl.Create(ViewPane);
-  ViewGrid.OwnsImage := True;
-  ViewGrid.Stretch := True;
-  ViewGrid.FullSize := True;
-  ViewPane.InsertBack(ViewGrid);
-  ViewGrid.Image :=  MakeTransparentLayerGrid(Trunc(ViewWidth), Trunc(ViewHeight), Trunc(ViewPane.Width), Trunc(ViewPane.Height), 8);
+  ViewPane := TCastleRectangleControl.Create(ViewUI);
+  ViewPane.FitRect(ViewWidth, ViewHeight, EffectiveRect);
+  ViewPane.Color := Vector4(0.05, 0.05, 0.05, 1.0);
+  ViewUI.InsertFront(ViewPane);
 
   CreateLabel(InfoLabel, 0);
   CreateNotification(InfoNote, 0, False);
   InfoLabel.Exists := False;
 end;
 
-procedure TCastleApp.LoadScene(const AFile: String);
+procedure TCastleApp.SynchTrackbar;
+begin
+  SettingUp := True;
+  CastleForm.TrackBar1.Position := CastleForm.TrackBar1.Max div 2;
+  SettingUp := False;
+end;
+
+procedure TCastleApp.AddDebugBox(const AScene: TCastleScene);
+begin
+  if Assigned(Debug) then
+    FreeAndNil(Debug);
+
+  Debug := TDebugTransformBox.Create(Self);
+  Debug.Parent := AScene;
+  Debug.BoxColor := Vector4(1,0,0, 1);
+  Debug.Exists := False;
+  {$ifndef cgeapp}
+  if CastleForm.MenuDebug.Checked then
+    Debug.Exists := True;
+  {$endif}
+end;
+
+function TCastleApp.LoadScene(const AFile: String): TCastleScene;
 begin
   {$ifndef cgeapp}
   CastleForm.CurrentFile := AFile;
+  CastleForm.CurrentModel := StripExtension(ExtractURIName(AFile));
   {$endif}
 
-  if Assigned(Debug) then
-    FreeAndNil(Debug);
-  if Assigned(Scene) then
-    FreeAndNil(Scene);
+  Result := nil;
+
   try
     Scene := TCastleScene.Create(Self);
     Scene.Spatial := [ssDynamicCollisions, ssRendering];
@@ -263,20 +325,9 @@ begin
           True,
           Viewport.PrepareParams);
 
-      Debug := TDebugTransformBox.Create(Self);
-      Debug.Parent := Scene;
-      Debug.BoxColor := Vector4(0,0,0, 1);
-      Debug.Exists := False;
-
-
+      AddDebugBox(Scene);
       {$ifndef cgeapp}
-      SettingUp := True;
-      CastleForm.TrackBar1.Position := CastleForm.TrackBar1.Max div 2;
-      SettingUp := False;
-      {$endif}
-
-      {$ifndef cgeapp}
-      CastleForm.MenuDebug.Checked := Debug.Exists;
+      SynchTrackbar;
       CastleForm.MenuInfo.Checked := InfoLabel.Exists;
       {$endif}
 
@@ -290,6 +341,7 @@ begin
     // Do something if required
     WriteLnLog('Scene created -> ReFlow ');
     Reflow;
+    Result := Scene;
   end;
 
 end;
@@ -310,18 +362,26 @@ end;
 procedure TCastleApp.Resize;
 begin
   inherited;
-  if Assigned(Viewport) then
+  if Assigned(ViewUI) then
     begin
-      Reflow;
+      ViewUI.SetRect(EffectiveRect);
+      if Assigned(ViewPane) then
+        begin
+          ViewPane.FitRect(ViewPane.RenderRect, ViewPane.ParentRect);
+          if Assigned(Viewport) then
+            begin
+              Reflow;
+            end;
+        end;
     end;
+
 end;
 
 procedure TCastleApp.Reflow;
 begin
   if Assigned(Viewport) and Assigned(Scene) then
     begin
-      ViewPane.FitRect(ViewPane.RenderRect, EffectiveRect);
-//      ViewGrid.FitRect(ViewGrid.RenderRect, ViewGrid.ParentRect);
+      ViewGrid.FitRect(ViewGrid.RenderRect, ViewGrid.ParentRect);
       ViewBack.FitRect(ViewBack.RenderRect, ViewBack.ParentRect);
       Viewport.FitRect(Viewport.RenderRect, Viewport.ParentRect);
       if not(Viewport.Width = LastWidth) then
@@ -506,10 +566,22 @@ var
 begin
   if Assigned(Viewport) then
     begin
-      ViewBack.RemoveControl(Viewport);
-      ViewPane.RemoveControl(ViewBack);
+      if Assigned(ViewBack) then
+        ViewBack.RemoveControl(Viewport);
       FreeAndNil(Viewport);
+    end;
+  if Assigned(ViewBack) then
+    begin
+      if Assigned(ViewGrid) then
+        ViewGrid.RemoveControl(ViewBack);
       FreeAndNil(ViewBack);
+    end;
+
+  if Assigned(ViewGrid) then
+    begin
+      if Assigned(ViewPane) then
+        ViewPane.RemoveControl(ViewGrid);
+      FreeAndNil(ViewGrid);
     end;
 
   NewVP := TCastleViewport.Create(Self);
@@ -554,9 +626,17 @@ begin
   CameraForm.ShowStats(NewVP);
   {$endif}
 
+  ViewGrid := TCastleImageControl.Create(Self);
+//  ViewGrid.OwnsImage := True;
+  ViewGrid.Stretch := True;
+//  ViewPane.Color := Vector4(0, 0, 0, 1.0);
+  ViewPane.InsertFront(ViewGrid);
+
+  ViewGrid.FitRect(NewVP.Width, NewVP.Height, ViewGrid.ParentRect);
+
   ViewBack := TCastleRectangleControl.Create(Self);
-  ViewBack.Color := Vector4(0,0,0,0.25);
-  ViewPane.InsertFront(ViewBack);
+  ViewBack.Color := Vector4(0.1, 0.1, 0.1, 1.0);
+  ViewGrid.InsertFront(ViewBack);
 
   ViewBack.FitRect(NewVP.Width, NewVP.Height, ViewBack.ParentRect);
   ViewBack.InsertFront(NewVP);

@@ -1,10 +1,10 @@
 object CastleForm: TCastleForm
-  Left = 638
-  Height = 240
-  Top = 768
+  Left = 636
+  Height = 429
+  Top = 492
   Width = 601
   Caption = 'CastleApp'
-  ClientHeight = 220
+  ClientHeight = 409
   ClientWidth = 601
   Menu = MainMenu1
   OnCreate = FormCreate
@@ -13,8 +13,8 @@ object CastleForm: TCastleForm
   LCLVersion = '2.0.10.0'
   object Window: TCastleControlBase
     Left = 170
-    Height = 195
-    Top = 25
+    Height = 382
+    Top = 27
     Width = 406
     Align = alClient
     Options = []
@@ -24,8 +24,8 @@ object CastleForm: TCastleForm
   end
   object TrackBar1: TTrackBar
     Left = 576
-    Height = 195
-    Top = 25
+    Height = 382
+    Top = 27
     Width = 25
     Max = 1000000
     OnChange = TrackBar1Change
@@ -37,36 +37,38 @@ object CastleForm: TCastleForm
   end
   object NavPanel: TPanel
     Left = 0
-    Height = 195
-    Top = 25
+    Height = 382
+    Top = 27
     Width = 170
     Align = alLeft
-    ClientHeight = 195
+    ClientHeight = 382
     ClientWidth = 170
     TabOrder = 2
     object TreeView1: TTreeView
       Left = 1
-      Height = 193
+      Height = 380
       Top = 1
       Width = 168
       Align = alClient
       TabOrder = 0
+      OnClick = TreeView1Click
+      OnSelectionChanged = TreeView1SelectionChanged
     end
   end
   object ToolPanel: TPanel
     Left = 0
-    Height = 25
+    Height = 27
     Top = 0
     Width = 601
     Align = alTop
-    ClientHeight = 25
+    ClientHeight = 27
     ClientWidth = 601
     TabOrder = 3
     object ToolBar1: TToolBar
       Left = 1
-      Height = 23
+      Height = 25
       Top = 1
-      Width = 300
+      Width = 272
       Align = alLeft
       ButtonHeight = 22
       ButtonWidth = 23
@@ -165,6 +167,30 @@ object CastleForm: TCastleForm
         ParentShowHint = False
         ShowHint = True
       end
+    end
+    object MaskEdit1: TMaskEdit
+      Left = 560
+      Height = 25
+      Top = 1
+      Width = 40
+      Align = alRight
+      Alignment = taRightJustify
+      CharCase = ecNormal
+      MaxLength = 5
+      TabOrder = 1
+      EditMask = '99990'
+      Text = '     '
+      SpaceChar = '_'
+    end
+    object Label1: TLabel
+      Left = 520
+      Height = 17
+      Top = 5
+      Width = 36
+      Align = alRight
+      BorderSpacing.Around = 4
+      Caption = 'Height'
+      ParentColor = False
     end
   end
   object MainMenu1: TMainMenu

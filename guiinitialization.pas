@@ -9,10 +9,10 @@ Factors of 360:
 }
 uses
   Classes, SysUtils, Math, CastleUIState, Forms, Controls, Graphics, Dialogs,
-  Menus, ComCtrls, ExtCtrls, CastleControl, CastleDialogs, CastleControls,
-  CastleColors, CastleUIControls, CastleTriangles, CastleShapes, CastleVectors,
-  CastleSceneCore, CastleScene, CastleTransform, CastleViewport, CastleCameras,
-  X3DNodes, X3DFields, X3DTIme, CastleImages, CastleGLImages,
+  Menus, ComCtrls, ExtCtrls, MaskEdit, StdCtrls, CastleControl, CastleDialogs,
+  CastleControls, CastleColors, CastleUIControls, CastleTriangles, CastleShapes,
+  CastleVectors, CastleSceneCore, CastleScene, CastleTransform, CastleViewport,
+  CastleCameras, X3DNodes, X3DFields, X3DTIme, CastleImages, CastleGLImages,
   CastleApplicationProperties, CastleLog, MainGameUnit, CastleTimeUtils,
   CastleKeysMouse;
 
@@ -22,7 +22,9 @@ type
   TCastleForm = class(TForm)
     CastleOpenDialog1: TCastleOpenDialog;
     ImageList1: TImageList;
+    Label1: TLabel;
     MainMenu1: TMainMenu;
+    MaskEdit1: TMaskEdit;
     MenuExit: TMenuItem;
     FrontMenu: TMenuItem;
     Iso21Menu: TMenuItem;
@@ -55,6 +57,8 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure TiltClick(Sender: TObject);
+    procedure TreeView1Click(Sender: TObject);
+    procedure TreeView1SelectionChanged(Sender: TObject);
     procedure ViewMenuClick(Sender: TObject);
     procedure MenuDebugClick(Sender: TObject);
     procedure MenuInfoClick(Sender: TObject);
@@ -73,8 +77,10 @@ type
     procedure ShowDebug;
     procedure UpdateCaption;
     procedure SetViewpoint;
+    procedure SwitchToSelectedNode;
   public
     CurrentFile: String;
+    CurrentModel: String;
     CurrentProjection: String;
     ViewID: Integer;
   end;
@@ -82,9 +88,12 @@ type
 var
   CastleForm: TCastleForm;
 
+const
+  DegreeSign = #$C2#$B0;  //this is the Utf8-sequnce for this symbol
+
 implementation
 
-uses ShowCameraSettings;
+uses ShowCameraSettings, CastleURIUtils, MiscHelpers;
 
 {$R *.lfm}
 
@@ -94,6 +103,7 @@ begin
   AppTime := CastleGetTickCount64;
   Caption := 'Tilely';
   CurrentFile := EmptyStr;
+  CurrentModel := EmptyStr;
   CurrentProjection := EmptyStr;
   Trackbar1.Visible := False;
 end;
@@ -114,6 +124,41 @@ begin
     end;
 end;
 
+procedure TCastleForm.SwitchToSelectedNode;
+var
+  Node: TTreeNode;
+  Model: TSpritelyModel;
+begin
+  Node := Treeview1.Selected;
+  if (Node = nil) then // Nothing to do
+    exit;
+
+  if (TObject(Node.Data).ClassName = 'TSpritelyModel') then
+    begin
+      With CastleApp do
+        begin
+          Model := TSpritelyModel(Node.Data);
+          Scene := Model.Scene;
+          CurrentModel := Model.ModelName;
+          CastleApp.OriginalSize := Model.RealSize;
+          AddDebugBox(Scene);
+          SynchTrackbar;
+          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Reflow;
+        end;
+    end;
+end;
+
+procedure TCastleForm.TreeView1Click(Sender: TObject);
+begin
+//  SwitchToSelectedNode;
+end;
+
+procedure TCastleForm.TreeView1SelectionChanged(Sender: TObject);
+begin
+  SwitchToSelectedNode;
+end;
+
 procedure TCastleForm.ViewMenuClick(Sender: TObject);
 begin
   with Sender as TMenuItem do
@@ -128,11 +173,30 @@ end;
 
 procedure TCastleForm.UpdateCaption;
 begin
-  Caption := 'Tilely : ' + CurrentFile +
-    ' shown in ' + CurrentProjection +
-    ' at ' +
-    FloatToStr((CastleApp.CameraRotation / CastleApp.CameraRotationSteps) * 360) +
-    ' degrees rotation';
+  with CastleApp do
+    begin
+      Caption := 'Tilely | ' + CurrentModel +
+        ' | ' + CurrentProjection +
+        ' @ ' +
+        FloatToStr((CameraRotation / CameraRotationSteps) * 360) + ' ' + DegreeSign;
+      if not(OriginalSize.IsZero) then
+        begin
+          Caption := Caption +
+          ' | Real - W : ' + FormatFloat('####0.00', OriginalSize.X) +
+          ' H : ' + FormatFloat('####0.00', OriginalSize.Z) +
+          ' D : ' + FormatFloat('####0.00', OriginalSize.Y);
+        end;
+      if Assigned(Scene) then
+        begin
+          if not(Scene.Scale.IsZero) then
+            begin
+              Caption := Caption +
+              ' | Scale - W : ' + FormatFloat('####0.00', Scene.BoundingBox.SizeX) +
+              ' H : ' + FormatFloat('####0.00', Scene.BoundingBox.SizeZ) +
+              ' D : ' + FormatFloat('####0.00', Scene.BoundingBox.SizeY);
+            end;
+        end;
+    end;
 end;
 
 procedure TCastleForm.SetViewpoint;
@@ -213,6 +277,9 @@ end;
 procedure TCastleForm.OpenModel;
 var
   i: Integer;
+  modelNode: TTreeNode;
+  newScene: TCastleScene;
+  newModel: TSpritelyModel;
 begin
   CastleOpenDialog1.Filter := '3D Models|*.gltf;*.glb;*.obj;*.x3d;*.x3dv';
   if CastleOpenDialog1.Execute then
@@ -220,15 +287,30 @@ begin
       if CastleOpenDialog1.Files.Count = 1 then
         begin
           CurrentFile := CastleOpenDialog1.Files[0];
+          CurrentModel := StripExtension(ExtractURIName(CurrentFile));
           WriteLnLog('Opening ' + CurrentFile);
-          CastleApp.LoadScene(CurrentFile);
+          newScene := CastleApp.LoadScene(CurrentFile);
+          if not(newScene = nil) then
+            begin
+//              modelNode := Treeview1.Items.AddObject(nil, StripExtension(ExtractURIName(CurrentFile)), newScene);
+              newModel := TSpritelyModel.Create(Self, CurrentFile, newScene, CastleApp.OriginalSize);
+              modelNode := Treeview1.Items.AddObject(nil, newModel.ModelName, newModel);
+            end;
         end
       else
         begin
           for i := 0 to CastleOpenDialog1.Files.Count - 1 do
             begin
-              WriteLnLog('Opening ' + CastleOpenDialog1.Files[i]);
-              CastleApp.LoadScene(CastleOpenDialog1.Files[i]);
+              CurrentFile := CastleOpenDialog1.Files[i];
+              CurrentModel := StripExtension(ExtractURIName(CurrentFile));
+              WriteLnLog('Opening ' + CurrentFile);
+              newScene := CastleApp.LoadScene(CurrentFile);
+              if not(newScene = nil) then
+                begin
+//                  modelNode := Treeview1.Items.AddObject(nil, StripExtension(ExtractURIName(CurrentFile)), newScene);
+                  newModel := TSpritelyModel.Create(Self, CurrentFile, newScene, CastleApp.OriginalSize);
+                  modelNode := Treeview1.Items.AddObject(nil, newModel.ModelName, newModel);
+                end;
             end;
         end;
     end;
@@ -282,6 +364,7 @@ end;
 procedure TCastleForm.OpenDirectoryClick(Sender: TObject);
 begin
 //  OpenDirectory;
+  ShowMessage('Coming Soon : For now open multiple files at once.' + LineEnding + 'e.g. Ctrl-A in the Open File dialog');
 end;
 
 procedure TCastleForm.ShowInfoClick(Sender: TObject);

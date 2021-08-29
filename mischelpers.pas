@@ -52,8 +52,24 @@ type
     procedure FitRect(const S: TFloatRectangle; const R: TFloatRectangle);
   end;
 
+  { functions }
+
+  function StripExtension(S: String): String;
+
 implementation
 uses MainGameUnit;
+
+{ functions }
+
+function StripExtension(S: String): String;
+var
+  I: SizeInt;
+begin
+  Result := S;
+  I := S.IndexOf('.');
+  if(I >= 0) then
+    Result := S.Remove(I);
+end;
 
 { TCastleViewportHelper }
 
@@ -135,9 +151,9 @@ begin
             Center := Vector3(Min(BoundingBox.Data[0].X, BoundingBox.Data[1].X) + (BoundingBox.SizeX / 2),
                               Min(BoundingBox.Data[0].Y, BoundingBox.Data[1].Y) + (BoundingBox.SizeY / 2),
                               Min(BoundingBox.Data[0].Z, BoundingBox.Data[1].Z) + (BoundingBox.SizeZ / 2));
-            Scale := Vector3(2 / BoundingBox.MaxSize,
-                             2 / BoundingBox.MaxSize,
-                             2 / BoundingBox.MaxSize);
+            Scale := Vector3(1 / BoundingBox.MaxSize,
+                             1 / BoundingBox.MaxSize,
+                             1 / BoundingBox.MaxSize);
 
             Translation := -Center;
           end;
