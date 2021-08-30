@@ -36,6 +36,7 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     MilitaryMenu: TMenuItem;
+    Splitter1: TSplitter;
     StaticText1: TStaticText;
     ToolButton9: TToolButton;
     ToolPanel: TPanel;

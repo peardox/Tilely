@@ -35,6 +35,7 @@ backup/
 lib/
 castle-engine-output/
 data/tests/
+dist/
 
 # Application bundle for Mac OS
 *.app/
