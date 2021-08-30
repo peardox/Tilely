@@ -20,6 +20,7 @@ uses
 
 begin
   RequireDerivedFormResource:=True;
+  Application.Title:='Tilely';
   Application.Scaled:=True;
   Application.Initialize;
   Application.CreateForm(TCastleForm, CastleForm);

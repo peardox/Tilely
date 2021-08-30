@@ -73,8 +73,9 @@ type
     InfoNote: TCastleNotifications;
     SettingUp: Boolean;
     LastWidth: Single;
-    ViewWidth: Single;
-    ViewHeight: Single;
+    ViewWidth: Integer;
+    ViewHeight: Integer;
+    UseOversample: Boolean;
     SceneTilt: Integer;
     OriginalSize: TVector3;
     constructor Create(AOwner: TComponent); override;
@@ -134,7 +135,8 @@ begin
   ViewScale := 1;
   ViewWidth := 256;
   ViewHeight := 256;
-  SettingUp := False;
+  UseOversample := True;
+  SettingUp := True;
   SceneTilt := 0;
   StretchMultiplier := 1;
   CameraRotationSteps := 8;
@@ -146,10 +148,13 @@ begin
       ViewID := 2;
       CurrentProjection := PopupMenu1.Items[ViewID].Caption;
       PopupMenu1.Items[ViewID].Checked := True;
+      EditWidth.Text := IntToStr(ViewWidth);
+      EditHeight.Text := IntToStr(ViewHeight);
     end;
   {$endif}
   OriginalSize := TVector3.Zero;
   FullSize := True;
+  SettingUp := False;
 //  IVC := TTexturesVideosCache.Create;
 end;
 
@@ -247,7 +252,6 @@ begin
         'Scale : ' + Scene.Scale.ToString + LineEnding +
         'Center : ' + Scene.Center.ToString + LineEnding +
         'Original : ' + OriginalSize.ToString + LineEnding +
-//        'Viewport : ' + FloatToStr(ViewWidth) + ' x ' + FloatToStr(ViewHeight) + LineEnding +
         'Elevation : ' + FLoatToStr(CameraElevation) + LineEnding +
         'Rotation : ' + FloatToStr((CameraRotation / CameraRotationSteps) * 360) + LineEnding +
         'Translation : ' + Scene.Translation.ToString;

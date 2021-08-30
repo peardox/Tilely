@@ -22,12 +22,12 @@ type
   TCastleForm = class(TForm)
     CastleOpenDialog1: TCastleOpenDialog;
     CheckOversample: TCheckBox;
+    EditHeight: TEdit;
+    EditWidth: TEdit;
     ImageList1: TImageList;
     Label1: TLabel;
     Label2: TLabel;
     MainMenu1: TMainMenu;
-    EditHeight: TMaskEdit;
-    EditWidth: TMaskEdit;
     MenuExit: TMenuItem;
     FrontMenu: TMenuItem;
     Iso21Menu: TMenuItem;
@@ -58,6 +58,9 @@ type
     TrackBar1: TTrackBar;
     TreeView1: TTreeView;
     Window: TCastleControlBase;
+    procedure CheckOversampleChange(Sender: TObject);
+    procedure EditHeightChange(Sender: TObject);
+    procedure EditWidthChange(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure TiltClick(Sender: TObject);
@@ -356,8 +359,60 @@ end;
 
 procedure TCastleForm.GrabSpriteClick(Sender: TObject);
 begin
+  if Assigned(CastleApp) then
+    begin
+      With CastleApp do
+        begin
+          if UseOversample then
+            GrabSprite(Trunc(ViewWidth), Trunc(ViewHeight), 8)
+          else
+            GrabSprite(Trunc(ViewWidth), Trunc(ViewHeight), 1);
+        end;
+    end;
+end;
+
+procedure TCastleForm.CheckOversampleChange(Sender: TObject);
+begin
   With CastleApp do
-    GrabSprite(Trunc(ViewWidth), Trunc(ViewHeight), 8);
+    UseOversample := CheckOversample.Checked;
+end;
+
+procedure TCastleForm.EditHeightChange(Sender: TObject);
+var
+  TestArg: Integer;
+begin
+  TestArg := StrToIntDef(EditHeight.Text, 0);
+  if Assigned(CastleApp) then
+    begin
+      with CastleApp do
+        begin
+          ViewHeight := TestArg;
+          if Assigned(Viewport) and not(SettingUp) then
+            begin
+              Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+              Reflow;
+            end;
+        end;
+    end;
+end;
+
+procedure TCastleForm.EditWidthChange(Sender: TObject);
+var
+  TestArg: Integer;
+begin
+  TestArg := StrToIntDef(EditWidth.Text, 0);
+  if Assigned(CastleApp) then
+    begin
+      with CastleApp do
+        begin
+          ViewWidth := TestArg;
+          if Assigned(Viewport) and not(SettingUp) then
+            begin
+              Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+              Reflow;
+            end;
+        end;
+    end;
 end;
 
 procedure TCastleForm.OpenModelClick(Sender: TObject);
