@@ -2,10 +2,10 @@ object CastleForm: TCastleForm
   Left = 636
   Height = 429
   Top = 492
-  Width = 601
+  Width = 1108
   Caption = 'CastleApp'
   ClientHeight = 409
-  ClientWidth = 601
+  ClientWidth = 1108
   Menu = MainMenu1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -15,7 +15,7 @@ object CastleForm: TCastleForm
     Left = 170
     Height = 382
     Top = 27
-    Width = 406
+    Width = 913
     Align = alClient
     Options = []
     TabOrder = 0
@@ -23,7 +23,7 @@ object CastleForm: TCastleForm
     OnClose = WindowClose
   end
   object TrackBar1: TTrackBar
-    Left = 576
+    Left = 1083
     Height = 382
     Top = 27
     Width = 25
@@ -59,10 +59,10 @@ object CastleForm: TCastleForm
     Left = 0
     Height = 27
     Top = 0
-    Width = 601
+    Width = 1108
     Align = alTop
     ClientHeight = 27
-    ClientWidth = 601
+    ClientWidth = 1108
     TabOrder = 3
     object ToolBar1: TToolBar
       Left = 1
@@ -71,7 +71,7 @@ object CastleForm: TCastleForm
       Width = 272
       Align = alLeft
       ButtonHeight = 22
-      ButtonWidth = 23
+      ButtonWidth = 27
       Caption = 'ToolBar1'
       Images = ImageList1
       ParentShowHint = False
@@ -87,7 +87,7 @@ object CastleForm: TCastleForm
         ShowHint = True
       end
       object ToolButton5: TToolButton
-        Left = 24
+        Left = 28
         Hint = 'Open Directory (Recursively)'
         Top = 2
         Caption = 'Open Directory'
@@ -97,7 +97,7 @@ object CastleForm: TCastleForm
         ShowHint = True
       end
       object ToolButton1: TToolButton
-        Left = 47
+        Left = 55
         Hint = 'Rotate Clockwise'
         Top = 2
         Caption = 'Rotate Clockwise'
@@ -107,7 +107,7 @@ object CastleForm: TCastleForm
         ShowHint = True
       end
       object ToolButton2: TToolButton
-        Left = 70
+        Left = 82
         Hint = 'Rotate Anti-Clockwise'
         Top = 2
         Caption = 'Rotate Anti-Clockwise'
@@ -117,7 +117,7 @@ object CastleForm: TCastleForm
         ShowHint = True
       end
       object ToolButton3: TToolButton
-        Left = 93
+        Left = 109
         Hint = 'Grab Sprite'
         Top = 2
         Caption = 'Grab Sprite'
@@ -127,7 +127,7 @@ object CastleForm: TCastleForm
         ShowHint = True
       end
       object ToolButton6: TToolButton
-        Left = 116
+        Left = 136
         Hint = 'Blender Settings'
         Top = 2
         Caption = 'Blender Settings'
@@ -137,7 +137,7 @@ object CastleForm: TCastleForm
         ShowHint = True
       end
       object ToolButton7: TToolButton
-        Left = 139
+        Left = 163
         Hint = 'Projection'
         Top = 2
         Caption = 'Projection'
@@ -148,7 +148,7 @@ object CastleForm: TCastleForm
         Style = tbsButtonDrop
       end
       object ToolButton8: TToolButton
-        Left = 162
+        Left = 190
         Hint = 'Tilt'
         Top = 2
         Caption = 'Tilt'
@@ -158,7 +158,7 @@ object CastleForm: TCastleForm
         ShowHint = True
       end
       object ToolButton9: TToolButton
-        Left = 185
+        Left = 217
         Hint = 'Show Debug Box'
         Top = 2
         Caption = 'Debug'
@@ -168,13 +168,25 @@ object CastleForm: TCastleForm
         ShowHint = True
       end
     end
-    object MaskEdit1: TMaskEdit
-      Left = 560
+    object Label1: TLabel
+      Left = 908
+      Height = 17
+      Top = 5
+      Width = 36
+      Align = alRight
+      BorderSpacing.Right = 12
+      BorderSpacing.Around = 4
+      Caption = 'Height'
+      ParentColor = False
+    end
+    object EditHeight: TMaskEdit
+      Left = 960
       Height = 25
       Top = 1
       Width = 40
       Align = alRight
       Alignment = taRightJustify
+      BorderSpacing.Right = 12
       CharCase = ecNormal
       MaxLength = 5
       TabOrder = 1
@@ -182,15 +194,55 @@ object CastleForm: TCastleForm
       Text = '     '
       SpaceChar = '_'
     end
-    object Label1: TLabel
-      Left = 520
+    object CheckOversample: TCheckBox
+      Left = 1012
+      Height = 25
+      Top = 1
+      Width = 83
+      Align = alRight
+      BorderSpacing.Right = 12
+      Caption = 'Oversample'
+      TabOrder = 2
+    end
+    object EditWidth: TMaskEdit
+      Left = 856
+      Height = 25
+      Top = 1
+      Width = 40
+      Align = alRight
+      Alignment = taRightJustify
+      BorderSpacing.Right = 12
+      CharCase = ecNormal
+      MaxLength = 5
+      TabOrder = 3
+      EditMask = '99990'
+      Text = '     '
+      SpaceChar = '_'
+    end
+    object Label2: TLabel
+      Left = 808
       Height = 17
       Top = 5
-      Width = 36
+      Width = 32
       Align = alRight
+      BorderSpacing.Right = 12
       BorderSpacing.Around = 4
-      Caption = 'Height'
+      Caption = 'Width'
       ParentColor = False
+    end
+    object StaticText1: TStaticText
+      Left = 709
+      Height = 17
+      Top = 5
+      Width = 83
+      Align = alRight
+      AutoSize = True
+      BorderSpacing.Right = 12
+      BorderSpacing.Around = 4
+      Caption = 'Sprite Settings'
+      Font.Style = [fsBold]
+      ParentFont = False
+      TabOrder = 4
     end
   end
   object MainMenu1: TMainMenu

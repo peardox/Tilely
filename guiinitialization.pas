@@ -21,10 +21,13 @@ type
 
   TCastleForm = class(TForm)
     CastleOpenDialog1: TCastleOpenDialog;
+    CheckOversample: TCheckBox;
     ImageList1: TImageList;
     Label1: TLabel;
+    Label2: TLabel;
     MainMenu1: TMainMenu;
-    MaskEdit1: TMaskEdit;
+    EditHeight: TMaskEdit;
+    EditWidth: TMaskEdit;
     MenuExit: TMenuItem;
     FrontMenu: TMenuItem;
     Iso21Menu: TMenuItem;
@@ -33,6 +36,7 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     MilitaryMenu: TMenuItem;
+    StaticText1: TStaticText;
     ToolButton9: TToolButton;
     ToolPanel: TPanel;
     ToolButton8: TToolButton;
