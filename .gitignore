@@ -36,6 +36,7 @@ lib/
 castle-engine-output/
 data/tests/
 dist/
+data/Models/paid/
 
 # Application bundle for Mac OS
 *.app/

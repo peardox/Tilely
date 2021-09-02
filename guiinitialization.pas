@@ -6,6 +6,8 @@ interface
 {
 Factors of 360:
 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360
+Factors of 11520
+1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24, 30, 32, 36, 40, 45, 48, 60, 64, 72, 80, 90, 96, 120, 128, 144, 160, 180, 192, 240, 256, 288, 320, 360, 384, 480, 576, 640, 720, 768, 960, 1152, 1280, 1440, 1920, 2304, 2880, 3840, 5760, 11520
 }
 uses
   Classes, SysUtils, Math, CastleUIState, Forms, Controls, Graphics, Dialogs,
@@ -119,6 +121,8 @@ end;
 procedure TCastleForm.TiltClick(Sender: TObject);
 begin
   // Tilt model forwards
+  CastleApp.ToggleBorders;
+  Exit;
   with CastleApp do
     begin
     if Assigned(Viewport) and not(SettingUp) then
@@ -289,7 +293,7 @@ var
   newScene: TCastleScene;
   newModel: TSpritelyModel;
 begin
-  CastleOpenDialog1.Filter := '3D Models|*.gltf;*.glb;*.obj;*.x3d;*.x3dv';
+  CastleOpenDialog1.Filter := '3D Models|*.glb;*.gltf;*.obj;*.x3dv;*.x3dvz;*.x3dv.gz;*.x3d;*.x3dz;*.x3d.gz;*.x3db;*.x3db.gz;*.wrl;*.wrz;*.wrl.gz';
   if CastleOpenDialog1.Execute then
     begin
       if CastleOpenDialog1.Files.Count = 1 then

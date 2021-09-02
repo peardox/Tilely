@@ -1,30 +1,17 @@
 # Tilely
 
-This project is Lazarus, Castle Editor and build-tool friendly
+This project is only Lazarus friendly ATM (GUI)
 
-##### To compile with Lazarus (the only option for MacOS)
+##### To compile with Lazarus
 
 Load TilelyLaz.lpi into Lazarus + compile
 
-##### To compile with Castle-Editor
 
-Open CastleEngineManifest.xml in Castle Editor and select Compile And Run from the Run menu item
 
-##### To compile from the command line for Windows/Linux
 
-castle-engine compile
 
-./TilelyApp
+**Bugfixes / Enhancements**
 
-##### To compile from the command line for Android
+Check file being loaded is a valid model type before loading (resolve problem with .utl files on Windows)
 
-castle-engine package  --target=android
-
-Install TilelyApp-debug.apk / TilelyApp-release.apk on a device
-
-##### To compile from the command line for iOS
-
-castle-engine package  --target=ios
-
-Install on a device or use simulator
-
+v0001 - Initial release version

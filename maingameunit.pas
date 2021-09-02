@@ -15,7 +15,7 @@ uses
   CastleTriangles, CastleShapes, CastleVectors,
   CastleSceneCore, CastleScene, CastleTransform,
   CastleViewport, CastleCameras, CastleProjection,
-  X3DNodes, X3DFields, X3DTIme, CastleRectangles,
+  X3DLoadInternalOBJ, X3DNodes, X3DFields, X3DTIme, CastleRectangles,
   CastleImages, CastleGLImages, CastleDebugTransform,
   CastleTextureImages, CastleCompositeImage, CastleBoxes,
   CastleApplicationProperties, CastleLog, CastleTimeUtils,
@@ -51,6 +51,8 @@ type
     function  Press(const Event: TInputPressRelease): Boolean; override; // TUIState
     function  Release(const Event: TInputPressRelease): Boolean; override; // TUIState
   private
+    ViewUI: TCastleRectangleControl;
+    ViewBack: TCastleRectangleControl;
     ViewGrid: TCastleImageControl;
     fCameraRotation: Integer;
     fCameraRotationSteps: Integer;
@@ -63,9 +65,7 @@ type
     procedure setCameraRotationSteps(const AValue: Integer);
     procedure setCameraElevation(const AValue: Single);
   public
-    ViewUI: TCastleRectangleControl;
     ViewPane: TCastleRectangleControl;
-    ViewBack: TCastleRectangleControl;
     Viewport: TCastleViewport;
     Scene: TCastleScene;
     Debug: TDebugTransformBox;
@@ -83,7 +83,7 @@ type
     procedure Start; override; // TUIState
     procedure Stop; override; // TUIState
     procedure BootStrap(Sender: TObject);
-    procedure Reflow;
+    procedure Reflow(const CalledFromResize: Boolean = False);
     procedure LoadUI;
     function LoadScene(const AFile: String): TCastleScene;
     function CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False; const useMainViewport: Boolean = True): TCastleImage;
@@ -96,12 +96,23 @@ type
     function CreateView(const SourceScene: TCastleScene; const VWidth: Cardinal; const VHeight: Cardinal): TCastleViewport;
     procedure AddDebugBox(const AScene: TCastleScene);
     procedure SynchTrackbar;
+    procedure ToggleBorders;
   end;
 
 var
   AppTime: Int64;
   CastleApp: TCastleApp;
 
+const
+  ValidModelMimeTypes: TStringArray = (
+    'application/x-wavefront-obj',
+    'model/gltf-binary',
+    'model/gltf+json',
+    'model/vrml',
+    'model/x3d+vrml',
+    'model/x3d+xml',
+    'model/x3d+binary'
+    );
 implementation
 {$ifdef cgeapp}
 uses AppInitialization;
@@ -132,6 +143,7 @@ constructor TCastleApp.Create(AOwner: TComponent);
 begin
   inherited;
 //  LogTextureCache := True;
+  WavefrontPhongMaterials := False;
   ViewScale := 1;
   ViewWidth := 256;
   ViewHeight := 256;
@@ -168,27 +180,7 @@ procedure TCastleApp.BootStrap(Sender: TObject);
 begin
   WriteLnLog('BootStrap = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   LoadUI;
-//  LoadScene('castle-data:/icon.png');
-
-//  LoadScene('castle-data:/tests/brick_tent.gltf');
-//  LoadScene('castle-data:/tests/isocam.glb');
-//  LoadScene('castle-data:/tests/up.glb');
-//  LoadScene('castle-data:/tests/sword.glb');
-//  LoadScene('castle-data:/tests/oblique.glb');
-//  LoadScene('C:\Assets\Creative Trio\gltf\bridge\stone\Bridge_11.glb');
-//  LoadScene('C:\Assets\ZerinLabs\Retro-Dungeon-EnviroKit\gltf\verA\floor_A.gltf');
-//  LoadScene('C:\Assets\ZerinLabs\Retro-Dungeon-EnviroKit\gltf\verA\floor_B.gltf');
-//  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Buildings/Inn.glb');
-//  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Props/Crate.glb');
-//  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Props/Path_Square.glb');
-//  LoadScene('castle-data:/Models/Quaternius/Medieval Village - Dec 2020/Props/Path_Straight.glb');
-//  LoadScene('castle-data:/Models/Quaternius/Ultimate Modular Ruins Pack - Aug 2021/Floor_Squares.glb');
-//  LoadScene('castle-data:/Models/Quaternius/Ultimate Modular Ruins Pack - Aug 2021/Floor_Tree.glb');
-//  LoadScene('castle-data:/Models/Quaternius/Ultimate Modular Ruins Pack - Aug 2021/Stairs.glb');
-//  LoadScene('castle-data:/Models/Quaternius/Ultimate Modular Ruins Pack - Aug 2021/Stairs_2.glb');
-//  LoadScene('castle-data:/medieval_objects/archeryrange.glb');
-//  LoadScene('castle-data:/dungeon_tiles/floorDecoration_wood.glb');
-
+  LoadScene('castle-data:/tests/oblique.glb');
 end;
 
 procedure TCastleApp.setCameraRotation(const AValue: Integer);
@@ -305,47 +297,64 @@ begin
 end;
 
 function TCastleApp.LoadScene(const AFile: String): TCastleScene;
+var
+  newScene: TCastleScene;
+  i: Integer;
+  mime: String;
+  mimeok: Boolean;
 begin
-  {$ifndef cgeapp}
-  CastleForm.CurrentFile := AFile;
-  CastleForm.CurrentModel := StripExtension(ExtractURIName(AFile));
-  {$endif}
-
   Result := nil;
 
-  try
-    Scene := TCastleScene.Create(Self);
-    Scene.Spatial := [ssDynamicCollisions, ssRendering];
-    Scene.RenderOptions.MinificationFilter := minNearest;
-    Scene.RenderOptions.MagnificationFilter := magNearest;
-    Scene.Setup2D;
-    try
-      Scene.Load(AFile);
-      OriginalSize := Scene.Normalize;
-      Scene.HeadlightOn := True;
+  mime := URIMimeType(AFile);
+  mimeok := False;
 
-      Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
-      Scene.PrepareResources([prSpatial, prRenderSelf, prRenderClones, prScreenEffects],
-          True,
-          Viewport.PrepareParams);
-
-      AddDebugBox(Scene);
-      {$ifndef cgeapp}
-      SynchTrackbar;
-      CastleForm.MenuInfo.Checked := InfoLabel.Exists;
-      {$endif}
-
-    except
-      on E : Exception do
+  for i := 0 to Length(ValidModelMimeTypes) - 1 do
+    begin
+      if mime = ValidModelMimeTypes[i] then
         begin
-          WriteLnLog('Error : ' + LineEnding + E.ClassName + LineEnding + E.Message);
+          mimeok := True;
+          Break;
         end;
     end;
-  finally
-    // Do something if required
-    WriteLnLog('Scene created -> ReFlow ');
+
+  if not(mimeok) then
+    begin
+      Exit(Result);
+    end;
+
+  try
+    newScene := TCastleScene.Create(Self);
+    newScene.Spatial := [ssDynamicCollisions, ssRendering];
+    newScene.RenderOptions.MinificationFilter := minNearest;
+    newScene.RenderOptions.MagnificationFilter := magNearest;
+    newScene.Setup2D;
+    newScene.Load(AFile);
+    OriginalSize := newScene.Normalize;
+    newScene.HeadlightOn := True;
+
+    Viewport := CreateView(newScene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+    newScene.PrepareResources([prSpatial, prRenderSelf, prRenderClones, prScreenEffects],
+        True,
+        Viewport.PrepareParams);
+
+    AddDebugBox(newScene);
+
+    {$ifndef cgeapp}
+    SynchTrackbar;
+    CastleForm.MenuInfo.Checked := InfoLabel.Exists;
+    CastleForm.CurrentFile := AFile;
+    CastleForm.CurrentModel := StripExtension(ExtractURIName(AFile));
+    {$endif}
+
+    Result := newScene;
+    Scene := newScene;
     Reflow;
-    Result := Scene;
+  except
+    on E : Exception do
+      begin
+        WriteLnLog('Error : ' + LineEnding + E.ClassName + LineEnding + E.Message);
+        FreeAndNil(Scene);
+      end;
   end;
 
 end;
@@ -374,20 +383,30 @@ begin
           ViewPane.FitRect(ViewPane.RenderRect, ViewPane.ParentRect);
           if Assigned(Viewport) then
             begin
-              Reflow;
+              Reflow(True);
             end;
         end;
     end;
 
 end;
 
-procedure TCastleApp.Reflow;
+procedure TCastleApp.Reflow(const CalledFromResize: Boolean = False);
 begin
   if Assigned(Viewport) and Assigned(Scene) then
     begin
+      if not(CalledFromResize) then
+        begin
+          ViewUI.SetRect(EffectiveRect);
+          ViewPane.FitParent;
+        end;
+      ViewGrid.FitParent;
+      ViewBack.FitParent;
+      Viewport.FitParent;
+{
       ViewGrid.FitRect(ViewGrid.RenderRect, ViewGrid.ParentRect);
       ViewBack.FitRect(ViewBack.RenderRect, ViewBack.ParentRect);
       Viewport.FitRect(Viewport.RenderRect, Viewport.ParentRect);
+}
       if not(Viewport.Width = LastWidth) then
         begin
           Viewport.Camera.Orthographic.Scale := OriginalScale * (OriginalWidth / Viewport.Width);;
@@ -633,19 +652,54 @@ begin
   ViewGrid := TCastleImageControl.Create(Self);
 //  ViewGrid.OwnsImage := True;
   ViewGrid.Stretch := True;
-//  ViewPane.Color := Vector4(0, 0, 0, 1.0);
   ViewPane.InsertFront(ViewGrid);
 
-  ViewGrid.FitRect(NewVP.Width, NewVP.Height, ViewGrid.ParentRect);
+  ViewGrid.FitParent;
 
   ViewBack := TCastleRectangleControl.Create(Self);
-  ViewBack.Color := Vector4(0.1, 0.1, 0.1, 1.0);
+  ViewBack.Color := Vector4(1, 0.1, 0.1, 0.0);
   ViewGrid.InsertFront(ViewBack);
 
-  ViewBack.FitRect(NewVP.Width, NewVP.Height, ViewBack.ParentRect);
   ViewBack.InsertFront(NewVP);
+  ViewBack.FitParent;
 
   Result := NewVP;
+end;
+{
+Border Nesting Order
+
+Form
+  Window
+    ViewUI             Cyan
+      ViewPane         Red
+        ViewGrid       Green
+          ViewBack     Blue
+            Viewport   Yellow
+
+}
+procedure TCastleApp.ToggleBorders;
+var
+  newWidth: Cardinal;
+begin
+  if ViewUI.Border.AllSides = 0 then
+    newWidth := 1
+  else
+    newWidth := 0;
+
+  ViewUI.Border.AllSides := newWidth;
+  ViewUI.BorderColor := Vector4(0, 1, 1, 1);
+  ViewPane.Border.AllSides := newWidth;
+  ViewPane.BorderColor := Vector4(1, 0, 0, 1);
+  ViewGrid.Border.AllSides := newWidth;
+  ViewGrid.BorderColor := Vector4(0, 1, 0, 1);
+  ViewBack.Border.AllSides := newWidth;
+  ViewBack.BorderColor := Vector4(0, 0, 1, 1);
+  Viewport.Border.AllSides := newWidth;
+  Viewport.BorderColor := Vector4(1, 1, 0, 1);
+
+  WriteLnLog( LineEnding );
+
+  Reflow;
 end;
 
 end.

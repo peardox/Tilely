@@ -47,9 +47,10 @@ type
   { TCastleUserInterface }
   TCastleUserInterfaceHelper = class helper for TCastleUserInterface
   public
-    procedure SetRect(const R: TFloatRectangle);
+    procedure SetRect(const R: TFloatRectangle; const AdjustForBorders: Boolean = False);
     procedure FitRect(const AWidth: Single; const AHeight: Single; const R: TFloatRectangle);
     procedure FitRect(const S: TFloatRectangle; const R: TFloatRectangle);
+    procedure FitParent;
   end;
 
   { functions }
@@ -57,7 +58,7 @@ type
   function StripExtension(S: String): String;
 
 implementation
-uses MainGameUnit;
+uses CastleLog, MainGameUnit;
 
 { functions }
 
@@ -87,10 +88,10 @@ end;
 
 procedure TCastleViewportHelper.ViewFromRadiusZ(const ARadius: Single; const ADirection: TVector3);
 begin
-  Camera.Up := Vector3(0, 0, -1);
-  Camera.Direction := ADirection;
-  Camera.Position  := ARadius * -ADirection.Normalize;
-  CastleApp.ViewPane.Color := Vector4(0, 0, 1, 1);
+  Camera.Up := Vector3(0, 0, 1);
+  Camera.Direction := -ADirection;
+  Camera.Position  := ARadius * ADirection.Normalize;
+//  CastleApp.ViewPane.Color := Vector4(0, 0, 1, 1);
 end;
 
 function TCastleViewportHelper.CalcAngles(const AScene: TCastleScene): TExtents;
@@ -204,12 +205,27 @@ end;
 
 { TCastleUserInterfaceHelper }
 
-procedure TCastleUserInterfaceHelper.SetRect(const R: TFloatRectangle);
+procedure TCastleUserInterfaceHelper.SetRect(const R: TFloatRectangle; const AdjustForBorders: Boolean = False);
 begin
-  Left := R.Left;
-  Bottom := R.Bottom;
-  Width := R.Width;
-  Height := R.Height;
+  if AdjustForBorders then
+    begin
+      Left := R.Left - Border.TotalLeft;
+      Bottom := R.Bottom - Border.TotalBottom;
+      Width := R.Width;
+      Height := R.Height;
+      WriteLnLog(Self.ClassName
+      + ' : ' + FloatToStr(Border.TotalLeft)
+      + ' : ' + FloatToStr(Border.TotalBottom)
+      + ' : ' + FloatToStr(Border.TotalWidth)
+      + ' : ' + FloatToStr(Border.TotalHeight));
+    end
+  else
+    begin
+      Left := R.Left;
+      Bottom := R.Bottom;
+      Width := R.Width;
+      Height := R.Height;
+    end;
 end;
 
 procedure TCastleUserInterfaceHelper.FitRect(const AWidth: Single; const AHeight: Single; const R: TFloatRectangle);
@@ -220,6 +236,11 @@ end;
 procedure TCastleUserInterfaceHelper.FitRect(const S: TFloatRectangle; const R: TFloatRectangle);
 begin
   setRect(S.FitInside(R));
+end;
+
+procedure TCastleUserInterfaceHelper.FitParent;
+begin
+  setRect(RenderRectWithBorder.FitInside(ParentRect), True);
 end;
 
 end.
