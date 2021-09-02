@@ -52,6 +52,7 @@ type
     function  Release(const Event: TInputPressRelease): Boolean; override; // TUIState
   private
     ViewUI: TCastleRectangleControl;
+    ViewPane: TCastleRectangleControl;
     ViewBack: TCastleRectangleControl;
     ViewGrid: TCastleImageControl;
     fCameraRotation: Integer;
@@ -65,7 +66,6 @@ type
     procedure setCameraRotationSteps(const AValue: Integer);
     procedure setCameraElevation(const AValue: Single);
   public
-    ViewPane: TCastleRectangleControl;
     Viewport: TCastleViewport;
     Scene: TCastleScene;
     Debug: TDebugTransformBox;
@@ -93,6 +93,7 @@ type
     property CameraRotationSteps: Integer read fCameraRotationSteps write setCameraRotationSteps;
     property CameraElevation: Single read fCameraElevation write setCameraElevation;
     procedure ShowInfo;
+    function CreateView(const SourceScene: TCastleScene): TCastleViewport;
     function CreateView(const SourceScene: TCastleScene; const VWidth: Cardinal; const VHeight: Cardinal): TCastleViewport;
     procedure AddDebugBox(const AScene: TCastleScene);
     procedure SynchTrackbar;
@@ -332,7 +333,8 @@ begin
     OriginalSize := newScene.Normalize;
     newScene.HeadlightOn := True;
 
-    Viewport := CreateView(newScene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+//    Viewport := CreateView(newScene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+    Viewport := CreateView(newScene);
     newScene.PrepareResources([prSpatial, prRenderSelf, prRenderClones, prScreenEffects],
         True,
         Viewport.PrepareParams);
@@ -579,6 +581,11 @@ begin
         FreeAndNil(Image);
       end;
     end;
+end;
+
+function TCastleApp.CreateView(const SourceScene: TCastleScene): TCastleViewport;
+begin
+  Result := CreateView(SourceScene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
 end;
 
 function TCastleApp.CreateView(const SourceScene: TCastleScene; const VWidth: Cardinal; const VHeight: Cardinal): TCastleViewport;

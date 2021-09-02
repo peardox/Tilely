@@ -155,7 +155,8 @@ begin
           CastleApp.OriginalSize := Model.RealSize;
           AddDebugBox(Scene);
           SynchTrackbar;
-          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Viewport := CreateView(Scene);
           Reflow;
         end;
     end;
@@ -235,7 +236,8 @@ begin
 
       if Assigned(Viewport) and not(SettingUp) then
         begin
-          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Viewport := CreateView(Scene);
           Reflow;
         end;
   end;
@@ -343,7 +345,8 @@ begin
       if Assigned(Viewport) and not(SettingUp) then
         begin
           CameraRotation := CameraRotation - 1;
-          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Viewport := CreateView(Scene);
           Reflow;
         end;
     end;
@@ -356,7 +359,8 @@ begin
       if Assigned(Viewport) and not(SettingUp) then
         begin
           CameraRotation := CameraRotation + 1;
-          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Viewport := CreateView(Scene);
           Reflow;
         end;
     end;
@@ -394,7 +398,8 @@ begin
           ViewHeight := TestArg;
           if Assigned(Viewport) and not(SettingUp) then
             begin
-              Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+//              Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+              Viewport := CreateView(Scene);
               Reflow;
             end;
         end;
@@ -413,7 +418,8 @@ begin
           ViewWidth := TestArg;
           if Assigned(Viewport) and not(SettingUp) then
             begin
-              Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+//              Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+              Viewport := CreateView(Scene);
               Reflow;
             end;
         end;
@@ -449,7 +455,8 @@ begin
       if Assigned(Viewport) and not(SettingUp) then
         begin
           CameraElevation := -campos;
-          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
+          Viewport := CreateView(Scene);
           Reflow;
         end;
     end;
