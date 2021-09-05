@@ -20,7 +20,8 @@ uses
   CastleTextureImages, CastleCompositeImage, CastleBoxes,
   CastleApplicationProperties, CastleLog, CastleTimeUtils,
   CastleFilesUtils, CastleKeysMouse, CastleNotifications,
-  RGBAlphaImageHelp, MiscHelpers, CastleURIUtils;
+  RGBAlphaImageHelp, MiscHelpers, CastleURIUtils,
+  ZipUrls, CastleDownload;
 
 type
   { TSpritelyModel }
@@ -103,6 +104,7 @@ type
 var
   AppTime: Int64;
   CastleApp: TCastleApp;
+  PackedDataReader: TPackedDataReader;
 
 const
   ValidModelMimeTypes: TStringArray = (
@@ -168,12 +170,18 @@ begin
   OriginalSize := TVector3.Zero;
   FullSize := True;
   SettingUp := False;
-//  IVC := TTexturesVideosCache.Create;
+
+  PackedDataReader := TPackedDataReader.Create;
+  PackedDataReader.SourceZipFileName := 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit.zip';
+  RegisterUrlProtocol('Retro-Interiors-EnviroKit', @PackedDataReader.ReadUrl, nil);
+
+  //  IVC := TTexturesVideosCache.Create;
 end;
 
 destructor TCastleApp.Destroy;
 begin
 //  FreeAndNil(IVC);
+  FreeAndNil(PackedDataReader);
   inherited;
 end;
 
@@ -182,6 +190,7 @@ begin
   WriteLnLog('BootStrap = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   LoadUI;
   LoadScene('castle-data:/tests/oblique.glb');
+//  LoadScene('Retro-Interiors-EnviroKit:/glb/arch_interior_floorBig_stone_varA.glb');
 end;
 
 procedure TCastleApp.setCameraRotation(const AValue: Integer);
