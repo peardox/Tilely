@@ -104,7 +104,7 @@ type
 var
   AppTime: Int64;
   CastleApp: TCastleApp;
-  PackedDataReader: TPackedDataReader;
+  ZipFileSystem: TZipFileSystem;
 
 const
   ValidModelMimeTypes: TStringArray = (
@@ -171,17 +171,17 @@ begin
   FullSize := True;
   SettingUp := False;
 
-  PackedDataReader := TPackedDataReader.Create;
-  PackedDataReader.SourceZipFileName := 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit.zip';
-  RegisterUrlProtocol('Retro-Interiors-EnviroKit', @PackedDataReader.ReadUrl, nil);
-
+//  ZipFileSystem := TZipFileSystem.Create;
+  ZipFileSystem := TZipFileSystem.Create('C:\src\Tilely\data\Models\Sketchfab\dungeon_modular_set.zip');
+//  ZipFileSystem.ZipFile := 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit-gltf.zip';
+//  ZipFileSystem.ZipFile := 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit.zip';
   //  IVC := TTexturesVideosCache.Create;
 end;
 
 destructor TCastleApp.Destroy;
 begin
 //  FreeAndNil(IVC);
-  FreeAndNil(PackedDataReader);
+  FreeAndNil(ZipFileSystem);
   inherited;
 end;
 
@@ -189,8 +189,12 @@ procedure TCastleApp.BootStrap(Sender: TObject);
 begin
   WriteLnLog('BootStrap = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   LoadUI;
-  LoadScene('castle-data:/tests/oblique.glb');
-//  LoadScene('Retro-Interiors-EnviroKit:/glb/arch_interior_floorBig_stone_varA.glb');
+//  LoadScene('castle-data:/logo.png');
+//  LoadScene('castle-data:/tests/oblique.glb');
+//  LoadScene(ZipFileSystem.Protocol + '/gltf/arch_interior_floorBig_stone_varA.gltf');
+//  LoadScene('castle-data:/Models/paid/Retro-Interiors-EnviroKit/gltf/arch_interior_floorBig_stone_varA.gltf');
+// LoadScene(ZipFileSystem.Protocol + '/glb/arch_interior_floorBig_stone_varA.glb');
+  LoadScene(ZipFileSystem.Protocol + '/scene.gltf');
 end;
 
 procedure TCastleApp.setCameraRotation(const AValue: Integer);
@@ -342,7 +346,6 @@ begin
     OriginalSize := newScene.Normalize;
     newScene.HeadlightOn := True;
 
-//    Viewport := CreateView(newScene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
     Viewport := CreateView(newScene);
     newScene.PrepareResources([prSpatial, prRenderSelf, prRenderClones, prScreenEffects],
         True,
@@ -681,6 +684,7 @@ begin
 
   Result := NewVP;
 end;
+
 {
 Border Nesting Order
 

@@ -37,6 +37,7 @@ castle-engine-output/
 data/tests/
 dist/
 data/Models/paid/
+data/Models/Sketchfab/
 
 # Application bundle for Mac OS
 *.app/

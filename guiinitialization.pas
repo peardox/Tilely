@@ -155,7 +155,6 @@ begin
           CastleApp.OriginalSize := Model.RealSize;
           AddDebugBox(Scene);
           SynchTrackbar;
-//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
           Viewport := CreateView(Scene);
           Reflow;
         end;
@@ -236,7 +235,6 @@ begin
 
       if Assigned(Viewport) and not(SettingUp) then
         begin
-//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
           Viewport := CreateView(Scene);
           Reflow;
         end;
@@ -306,7 +304,6 @@ begin
           newScene := CastleApp.LoadScene(CurrentFile);
           if not(newScene = nil) then
             begin
-//              modelNode := Treeview1.Items.AddObject(nil, StripExtension(ExtractURIName(CurrentFile)), newScene);
               newModel := TSpritelyModel.Create(Self, CurrentFile, newScene, CastleApp.OriginalSize);
               modelNode := Treeview1.Items.AddObject(nil, newModel.ModelName, newModel);
             end;
@@ -321,7 +318,6 @@ begin
               newScene := CastleApp.LoadScene(CurrentFile);
               if not(newScene = nil) then
                 begin
-//                  modelNode := Treeview1.Items.AddObject(nil, StripExtension(ExtractURIName(CurrentFile)), newScene);
                   newModel := TSpritelyModel.Create(Self, CurrentFile, newScene, CastleApp.OriginalSize);
                   modelNode := Treeview1.Items.AddObject(nil, newModel.ModelName, newModel);
                 end;
@@ -345,7 +341,6 @@ begin
       if Assigned(Viewport) and not(SettingUp) then
         begin
           CameraRotation := CameraRotation - 1;
-//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
           Viewport := CreateView(Scene);
           Reflow;
         end;
@@ -359,7 +354,6 @@ begin
       if Assigned(Viewport) and not(SettingUp) then
         begin
           CameraRotation := CameraRotation + 1;
-//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
           Viewport := CreateView(Scene);
           Reflow;
         end;
@@ -398,7 +392,6 @@ begin
           ViewHeight := TestArg;
           if Assigned(Viewport) and not(SettingUp) then
             begin
-//              Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
               Viewport := CreateView(Scene);
               Reflow;
             end;
@@ -418,7 +411,6 @@ begin
           ViewWidth := TestArg;
           if Assigned(Viewport) and not(SettingUp) then
             begin
-//              Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
               Viewport := CreateView(Scene);
               Reflow;
             end;
@@ -455,7 +447,6 @@ begin
       if Assigned(Viewport) and not(SettingUp) then
         begin
           CameraElevation := -campos;
-//          Viewport := CreateView(Scene, Trunc(ViewPane.Width), Trunc(ViewPane.Height));
           Viewport := CreateView(Scene);
           Reflow;
         end;
