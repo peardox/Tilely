@@ -23,13 +23,12 @@ interface
 uses SysUtils, Classes, Zipper,
   CastleLog, CastleUtils,
   CastleFilesUtils, CastleDownload,
-  CastleStringUtils,
-  CastleURIUtils;
+  CastleStringUtils, CastleURIUtils;
 
 type
   EZipError = class(Exception);
 
-  TZipFileSystem = class
+  TZipFileSystem = class(TComponent)
   private
     fProtocol: String;
     fZipFile: String;
@@ -40,12 +39,16 @@ type
     procedure DoEndZipFile(Sender: TObject; const Ratio: Double);
     procedure DoDoneOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
     procedure DoCreateOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+    procedure DoOpenInputStream(Sender: TObject; var AStream: TStream);
+    procedure DoCloseInputStream(Sender: TObject; var AStream: TStream);
     procedure SetZipFile(const AUrl: String);
   public
-    function ReadUrl(const AUrl: string; out MimeType: string): TStream;
+    function GetStream(const AUrl: string): TStream;
+    function GetStream(const AUrl: string; out MimeType: string): TStream;
+    function ReadZip(const AUrl: string; out MimeType: string): TStream;
     function getProtocol: String;
-    constructor Create;
-    constructor Create(const AUrl: string);
+    constructor Create(AOwner: TComponent); override;
+    constructor Create(AOwner: TComponent; const AUrl: string);
     destructor Destroy; override;
     property ZipFile: String read fZipFile write SetZipFile;
     property Protocol: String read getProtocol;
@@ -72,6 +75,7 @@ procedure TZipFileSystem.SetZipFile(const AUrl: String);
 var
   I: Integer;
   P: String;
+  F: String;
   E: SizeInt;
 begin
   if not(fZipFile = AUrl) then
@@ -81,39 +85,40 @@ begin
       if fZipFile = EmptyStr then
         raise EZipError.Create('Attempt to open an unnamed Zip File');
 
-      P := LowerCase(ExtractFileName(fZipFile));
-      E := P.IndexOf('.');
-      if E = 0 then
-        P := Random(1000000).ToString
+      // Create a friendly name for the zip
+      F := LowerCase(ExtractFileName(fZipFile));
+      E := F.IndexOf('.zip');
+      if E = 0 then // A file called .zip is being opened?
+        F := 'dotzip'
       else if E > 0 then
-        P := P.Remove(E);
-      fFriendlyName := P;
+        F := F.Remove(E);
+      fFriendlyName := F;
 
-      P := 'zip-data';
+      // Create a protocol for the zip
+      I := 1;
+      repeat
+        P := 'zip-data-' + Format('%d', [I]);
+        if URIValidProtocol(P) then
+          if not(RegisteredUrlProtocol(P)) then
+            Break;
+        Inc(I);
+      until false;
 
-//      if not(RegisteredProtocols.Find(P) = nil) then
-      if False then
-        begin
-          raise EZipError.CreateFmt('Attempt to use already defined protocol %s for %s', [P, fZipFile]);
-        end
-      else
+    fProtocol := P;
+    RegisterUrlProtocol(fProtocol, @ReadZip, nil);
+    WriteLnLog('Registered Protocol ' + fProtocol + ' for ' + fZipFile);
+
+    fUnzip.FileName := fZipFile;
+    if not(fZipFiles = nil) then
+      FreeAndNil(fZipFiles);
+    fZipFiles := TStringList.Create;
+    fZipFiles.Sorted := True;
+    fZipFiles.Duplicates := dupError;
+    fUnzip.Examine;
+    for I := 0 to fUnzip.Entries.Count - 1 do
       begin
-        fProtocol := P;
-        RegisterUrlProtocol(fProtocol, @ReadUrl, nil);
-        WriteLnLog('Registered Protocol ' + fProtocol + ' for ' + fZipFile);
-
-        fUnzip.FileName := fZipFile;
-        if not(fZipFiles = nil) then
-          FreeAndNil(fZipFiles);
-        fZipFiles := TStringList.Create;
-        fZipFiles.Sorted := True;
-        fZipFiles.Duplicates := dupError;
-        fUnzip.Examine;
-        for I := 0 to fUnzip.Entries.Count - 1 do
-          begin
-            WriteLnLog('File : ' + fUnzip.Entries[I].ArchiveFileName);
-            fZipFiles.AddObject(fUnzip.Entries[I].ArchiveFileName, nil);
-          end;
+//        WriteLnLog('File : ' + fUnzip.Entries[I].ArchiveFileName);
+        fZipFiles.AddObject(fUnzip.Entries[I].ArchiveFileName, nil);
       end;
     end;
 end;
@@ -141,7 +146,6 @@ begin
     end
   else
     begin
-      WriteLnLog('DoCreateOutZipStream : Can''t locate ' + AItem.ArchiveFileName + ' in ' + fZipFile);
       raise EZipError.CreateFmt('Can''t locate %s in %s', [
         AItem.ArchiveFileName,
         fZipFile
@@ -156,50 +160,55 @@ begin
   AStream.Position:=0;
 end;
 
-function TZipFileSystem.ReadUrl(const AUrl: string; out MimeType: string): TStream;
+procedure TZipFileSystem.DoOpenInputStream(Sender: TObject; var AStream: TStream);
+begin
+  WriteLnLog('DoOpenInputStream');
+end;
+
+procedure TZipFileSystem.DoCloseInputStream(Sender: TObject; var AStream: TStream);
+begin
+  WriteLnLog('DoCloseInputStream');
+end;
+
+function TZipFileSystem.GetStream(const AUrl: string): TStream;
+var
+  MimeType: String;
+begin
+  Result := ReadZip(AUrl, MimeType);
+end;
+
+function TZipFileSystem.GetStream(const AUrl: string; out MimeType: string): TStream;
+begin
+  Result := ReadZip(AUrl, MimeType);
+end;
+
+function TZipFileSystem.ReadZip(const AUrl: string; out MimeType: string): TStream;
 var
   I: Integer;
-  AStream: TMemoryStream;
   FileInZip: String;
   RelUrl: String;
 begin
   Result := nil;
 
-  WriteLnLog('Url = ' + AUrl);
-  RelUrl := PrefixRemove('/', URIDeleteProtocol(AUrl), false);
-  WriteLnLog('NP Url = ' + RelUrl);
-  RelUrl := RawURIDecode(fProtocol + ':/' + RelUrl);
-  WriteLnLog('RelUrl = ' + RelUrl);
-  RelUrl := PrefixRemove('/', URIDeleteProtocol(RelUrl), false);
-  WriteLnLog('Combining ' + fProtocol + ':/ and ' + RelUrl);
-  RelUrl := CombineURI(fProtocol + ':/', RelUrl);
-  WriteLnLog('Combined = ' + RelUrl);
-  FileInZip := PrefixRemove('/', URIDeleteProtocol(RelUrl), false);
-  WriteLnLog('Target = ' + FileInZip);
+  FileInZip := PrefixRemove('/', URIDeleteProtocol(AUrl), false);
 
   if fZipFiles.Find(FileInZip, I) then
     begin
       { If the requested file hasn't been extracted yet then do so }
       if fZipFiles.Objects[I] = nil then
         begin
-          WriteLnLog('ReadUrl : Extract ' + RelUrl + LineEnding + '  ' + FileInZip);
           fUnzip.UnZipFile(FileInZip);
-        end
-      else
-        WriteLnLog('ReadUrl : We already have ' + FileInZip);
+        end;
+
       { We now have an Stream object - best double check anyway...}
       if not(fZipFiles.Objects[I] = nil) then
         begin
           MimeType := URIMimeType(FileInZip);
-          AStream := TMemoryStream(fZipFiles.Objects[I]);
-          WriteLnLog('Requested : ' + FileInZip + ', Loaded : ' + fZipFiles[i] + ', MimeType = ' + MimeType);
-          WriteLnLog('Stream : Size = ' + IntToStr(AStream.Size) + ', Position = ' + IntToStr(AStream.Position));
-          Result := AStream;
+          Result := TMemoryStream(fZipFiles.Objects[I]);
         end;
     end
   else
     begin
-      WriteLnLog('ReadUrl : Can''t locate ' + FileInZip + ' in ' + fZipFile);
       raise EZipError.CreateFmt('Can''t locate %s in %s', [
         FileInZip,
         fZipFile
@@ -207,29 +216,31 @@ begin
     end;
 end;
 
-constructor TZipFileSystem.Create(const AUrl: string);
+constructor TZipFileSystem.Create(AOwner: TComponent; const AUrl: string);
 begin
-  Create;
+  Create(AOwner);
   ZipFile := AUrl;
 end;
 
-constructor TZipFileSystem.Create;
+constructor TZipFileSystem.Create(AOwner: TComponent);
 begin
-  inherited Create;
+  inherited Create(AOwner);
+
   fUnzip := TUnZipper.Create;
   fUnzip.OnCreateStream := @DoCreateOutZipStream;
   fUnzip.OnDoneStream := @DoDoneOutZipStream;
   fUnzip.OnStartFile := @DoStartZipFile;
   fUnzip.OnEndFile := @DoEndZipFile;
-
-  WritelnLog('Created UnZip');
+  fUnZip.OnOpenInputStream := @DoOpenInputStream;
+  fUnZip.OnCloseInputStream := @DoCloseInputStream;
 end;
 
 destructor TZipFileSystem.Destroy;
 begin
-  WritelnLog('Destroying UnZip');
   FreeAndNil(fZipFiles);
   FreeAndNil(fUnzip);
+  WriteLnLog('UnRegistering Protocol ' + fProtocol);
+  UnregisterUrlProtocol(fProtocol);
   inherited;
 end;
 

@@ -1,6 +1,7 @@
 unit MainGameUnit;
 
 {$mode objfpc}{$H+}
+//{$define devmode}
 
 interface
 
@@ -67,6 +68,9 @@ type
     procedure setCameraRotationSteps(const AValue: Integer);
     procedure setCameraElevation(const AValue: Single);
   public
+    {$ifdef devmode}
+    tz: Array [0..9] of TZipFileSystem;
+    {$endif}
     Viewport: TCastleViewport;
     Scene: TCastleScene;
     Debug: TDebugTransformBox;
@@ -104,7 +108,6 @@ type
 var
   AppTime: Int64;
   CastleApp: TCastleApp;
-  ZipFileSystem: TZipFileSystem;
 
 const
   ValidModelMimeTypes: TStringArray = (
@@ -171,17 +174,22 @@ begin
   FullSize := True;
   SettingUp := False;
 
-//  ZipFileSystem := TZipFileSystem.Create;
-  ZipFileSystem := TZipFileSystem.Create('C:\src\Tilely\data\Models\Sketchfab\dungeon_modular_set.zip');
-//  ZipFileSystem.ZipFile := 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit-gltf.zip';
-//  ZipFileSystem.ZipFile := 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit.zip';
-  //  IVC := TTexturesVideosCache.Create;
+  {$ifdef devmode}
+  tz[0] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/freshwater_goby_no.1.zip');
+  tz[1] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/honda_cb500f_scrambler_custom.zip');
+  tz[2] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/modular_dungeon.zip');
+  tz[3] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/sandbags_-_defense_line.zip');
+  tz[4] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/soul_of_the_forest_many_animations.zip');
+  tz[5] := TZipFileSystem.Create(Self, 'castle-data:/Models/Paid/bear.zip');
+  tz[6] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/viking_room.zip');
+  tz[7] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/dungeon_modular_set.zip');
+  tz[8] := TZipFileSystem.Create(Self, 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit-gltf.zip');
+  tz[9] := TZipFileSystem.Create(Self, 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit.zip');
+  {$endif}
 end;
 
 destructor TCastleApp.Destroy;
 begin
-//  FreeAndNil(IVC);
-  FreeAndNil(ZipFileSystem);
   inherited;
 end;
 
@@ -189,12 +197,19 @@ procedure TCastleApp.BootStrap(Sender: TObject);
 begin
   WriteLnLog('BootStrap = ' + FloatToStr(EffectiveWidth) + ' x ' + FloatToStr(EffectiveHeight));
   LoadUI;
+  {$ifdef devmode}
 //  LoadScene('castle-data:/logo.png');
-//  LoadScene('castle-data:/tests/oblique.glb');
 //  LoadScene(ZipFileSystem.Protocol + '/gltf/arch_interior_floorBig_stone_varA.gltf');
 //  LoadScene('castle-data:/Models/paid/Retro-Interiors-EnviroKit/gltf/arch_interior_floorBig_stone_varA.gltf');
 // LoadScene(ZipFileSystem.Protocol + '/glb/arch_interior_floorBig_stone_varA.glb');
-  LoadScene(ZipFileSystem.Protocol + '/scene.gltf');
+// LoadScene(ZipFileSystem.Protocol + '/scene.gltf');
+  LoadScene(tz[5].Protocol + '/scene.gltf');
+//  LoadScene(tz[8].Protocol + '/gltf/arch_interior_floorBig_stone_varA.gltf');
+//  LoadScene(tz[9].Protocol + '/glb/arch_interior_floorBig_stone_varA.glb');
+  {$else}
+  LoadScene('castle-data:/tests/oblique.glb');
+  {$endif}
+
 end;
 
 procedure TCastleApp.setCameraRotation(const AValue: Integer);
@@ -280,7 +295,8 @@ begin
 
   ViewPane := TCastleRectangleControl.Create(ViewUI);
   ViewPane.FitRect(ViewWidth, ViewHeight, EffectiveRect);
-  ViewPane.Color := Vector4(0.05, 0.05, 0.05, 1.0);
+  ViewPane.Color := Vector4(1, 1, 1, 1.0);
+//  ViewPane.Color := Vector4(0.05, 0.05, 0.05, 1.0);
   ViewUI.InsertFront(ViewPane);
 
   CreateLabel(InfoLabel, 0);
@@ -645,7 +661,6 @@ begin
   OriginalScale := Extents.Size.Y / (VWidth * HeightAdjust);
   NewVP.Camera.Orthographic.Scale := OriginalScale;
 
-//  NewVP.Width := Trunc(VWidth / HeightAdjust);
   NewVP.Height := Trunc(VWidth * HeightAdjust);
 
   if not (StretchMultiplier = 1) then
@@ -669,7 +684,6 @@ begin
   {$endif}
 
   ViewGrid := TCastleImageControl.Create(Self);
-//  ViewGrid.OwnsImage := True;
   ViewGrid.Stretch := True;
   ViewPane.InsertFront(ViewGrid);
 
