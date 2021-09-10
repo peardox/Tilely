@@ -34,7 +34,7 @@ backup/
 *.bak
 lib/
 castle-engine-output/
-data/tests/
+# data/tests/
 dist/
 data/Models/paid/
 data/Models/Sketchfab/

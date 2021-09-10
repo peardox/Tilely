@@ -1,7 +1,8 @@
 unit MainGameUnit;
 
 {$mode objfpc}{$H+}
-//{$define devmode}
+ {$define devmode}
+ {$define devstream}
 
 interface
 
@@ -108,6 +109,9 @@ type
 var
   AppTime: Int64;
   CastleApp: TCastleApp;
+  {$ifdef devstream}
+  TestStream: TStream;
+  {$endif}
 
 const
   ValidModelMimeTypes: TStringArray = (
@@ -174,13 +178,23 @@ begin
   FullSize := True;
   SettingUp := False;
 
+  {$ifdef devstream}
+  TestStream := Download('castle-data:/Models/Paid/bear.zip', [soForceMemoryStream]);
+  {$endif}
+
   {$ifdef devmode}
   tz[0] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/freshwater_goby_no.1.zip');
   tz[1] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/honda_cb500f_scrambler_custom.zip');
   tz[2] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/modular_dungeon.zip');
   tz[3] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/sandbags_-_defense_line.zip');
   tz[4] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/soul_of_the_forest_many_animations.zip');
+
+  {$ifdef devstream}
+  tz[5] := TZipFileSystem.Create(Self, TestStream, 'bear.zip');
+  {$else}
   tz[5] := TZipFileSystem.Create(Self, 'castle-data:/Models/Paid/bear.zip');
+  {$endif}
+
   tz[6] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/viking_room.zip');
   tz[7] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/dungeon_modular_set.zip');
   tz[8] := TZipFileSystem.Create(Self, 'castle-data:/Models/Paid/Retro-Interiors-EnviroKit-gltf.zip');
@@ -190,6 +204,9 @@ end;
 
 destructor TCastleApp.Destroy;
 begin
+  {$ifdef devstream}
+  FreeAndNil(TestStream);
+  {$endif}
   inherited;
 end;
 
