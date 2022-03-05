@@ -312,7 +312,7 @@ object CastleForm: TCastleForm
         OnClick = MenuInfoClick
       end
       object LoadAniTxt: TMenuItem
-        Caption = 'Load SubAction List'
+        Caption = 'Load Action List'
         OnClick = LoadAniTxtClick
       end
       object MenuGrabSprite: TMenuItem
@@ -323,6 +323,10 @@ object CastleForm: TCastleForm
       object MenuGrabAll: TMenuItem
         Caption = 'Grab All'
         OnClick = MenuGrabAllClick
+      end
+      object MenuProcessQueue: TMenuItem
+        Caption = 'Process Queue'
+        OnClick = MenuProcessQueueClick
       end
       object MenuAbort: TMenuItem
         Caption = 'Abort'

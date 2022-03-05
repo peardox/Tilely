@@ -43,6 +43,7 @@ type
     LoadAniTxt: TMenuItem;
     MenuGrabAll: TMenuItem;
     MenuAbort: TMenuItem;
+    MenuProcessQueue: TMenuItem;
     MilitaryMenu: TMenuItem;
     Splitter1: TSplitter;
     StaticText1: TStaticText;
@@ -77,6 +78,7 @@ type
     procedure MenuExitClick(Sender: TObject);
     procedure MenuGrabAllClick(Sender: TObject);
     procedure MenuAbortClick(Sender: TObject);
+    procedure MenuProcessQueueClick(Sender: TObject);
     procedure TiltClick(Sender: TObject);
     procedure TextureAltasClick(Sender: TObject);
     procedure TreeView1Click(Sender: TObject);
@@ -150,6 +152,18 @@ begin
   CastleApp.Abort := True;
 end;
 
+procedure TCastleForm.MenuProcessQueueClick(Sender: TObject);
+var
+  Node: TTreeNode;
+begin
+  if TreeView1.Items.Count > 0 then
+    begin
+      Node := Treeview1.Items[0];
+      if not (Node = nil) then
+        CastleApp.ProcessAllModels(0, '');
+    end;
+end;
+
 procedure TCastleForm.TiltClick(Sender: TObject);
 begin
   // Tilt model forwards
@@ -186,9 +200,9 @@ begin
         begin
           WriteLnLog('Starting render');
           if UseOversample then
-            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 8)
+            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 8, 0, True)
           else
-            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 1, 1);
+            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 1, 1, 0, True);
           WriteLnLog('Finished render');
         end;
     end;
@@ -329,14 +343,6 @@ end;
 
 procedure TCastleForm.MenuInfoClick(Sender: TObject);
 begin
-  With CastleApp do
-    begin
-      if Assigned(Scene) then
-        begin
-          InfoLabel.Exists := not InfoLabel.Exists;
-          MenuInfo.Checked := InfoLabel.Exists;
-        end;
-    end;
 end;
 
 procedure TCastleForm.MenuOpenClick(Sender: TObject);
@@ -387,7 +393,6 @@ begin
       if Assigned(Scene) then
         begin
           MenuDebug.Checked := Debug.Exists;
-          MenuInfo.Checked := InfoLabel.Exists;
         end;
     end;
 end;

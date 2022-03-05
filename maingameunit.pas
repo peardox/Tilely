@@ -9,7 +9,7 @@ interface
 uses
   Classes, SysUtils, Math, CastleUIState,
   {$ifndef cgeapp}
-  Forms, Controls, Graphics, Dialogs, CastleControl,
+  Forms, Controls, Graphics, Dialogs, ComCtrls, CastleControl,
   {$else}
   CastleWindow,
   {$endif}
@@ -90,6 +90,8 @@ type
     TextureAtlasX: Cardinal;
     TextureAtlasY: Cardinal;
     SubActionList: TSubActionArray;
+    DoingModel: String;
+    DoingNode: Integer;
     procedure setCameraRotation(const AValue: Integer);
     procedure setCameraRotationSteps(const AValue: Integer);
     procedure setCameraElevation(const AValue: Single);
@@ -100,8 +102,7 @@ type
     Viewport: TCastleViewport;
     Scene: TCastleScene;
     Debug: TDebugTransformBox;
-    InfoLabel: TCastleLabel;
-    InfoNote: TCastleNotifications;
+    InfoNote: TCastleLabel;
     SettingUp: Boolean;
     LastWidth: Single;
     ViewWidth: Integer;
@@ -135,6 +136,7 @@ type
     procedure AddDebugBox(const AScene: TCastleScene);
     procedure SynchTrackbar;
     procedure ToggleBorders;
+    procedure ProcessAllModels(NodeIdx: Integer; SavePath: String);
   end;
 
 var
@@ -207,7 +209,11 @@ begin
   CameraRotationSteps := 8;
   CameraRotation := 0;
   CameraElevation := 0; // .81625; // sqrt(2); //
+
   {$ifndef cgeapp}
+  DoingModel := EmptyStr;
+  DoingNode := -1;
+
   with CastleForm do
     begin
       ViewID := 0;
@@ -342,7 +348,6 @@ begin
         'Translation : ' + Scene.Translation.ToString;
 
 //        'Extents : ' + FloatToStr(Extents.Min.X) + ' x ' + FloatToStr(Extents.Min.Y) + ' - '  + FloatToStr(Extents.Max.X) + ' x '  + FloatToStr(Extents.Max.Y) + ' : '  + FloatToStr(Extents.Size.X) + ' x '  + FloatToStr(Extents.Size.Y) + LineEnding +
-      InfoLabel.Caption := Info;
     end;
 end;
 
@@ -363,10 +368,7 @@ begin
 //  ViewPane.Color := Vector4(0.05, 0.05, 0.05, 1.0);
   ViewUI.InsertFront(ViewPane);
 
-  CreateLabel(InfoLabel, 0);
-  CreateNotification(InfoNote, 0, False);
-  InfoNote.Color := Vector4(0.0, 0.0, 0.0, 1.0);
-  InfoLabel.Exists := False;
+  CreateLabel(InfoNote, 0);
 end;
 
 procedure TCastleApp.SynchTrackbar;
@@ -437,7 +439,6 @@ begin
 
     {$ifndef cgeapp}
     SynchTrackbar;
-    CastleForm.MenuInfo.Checked := InfoLabel.Exists;
     CastleForm.CurrentFile := AFile;
     CastleForm.CurrentModel := StripExtension(ExtractURIName(AFile));
     {$endif}
@@ -527,7 +528,48 @@ begin
 
 end;
 
-
+procedure TCastleApp.ProcessAllModels(NodeIdx: Integer; SavePath: String);
+var
+  Node: TTreeNode;
+  Model: TSpritelyModel;
+begin
+  WriteLnLog('ProcessAllModels(' + IntToStr(NodeIdx) + ' , ' + SavePath + ')');
+  if DoingNode < CastleForm.Treeview1.Items.Count then
+    begin
+      Node := CastleForm.Treeview1.Items[NodeIdx];
+      if Node = nil then
+        begin
+          DoingNode := -1;
+          DoingModel := EmptyStr;
+          AniRec := Default(TAnimationController);
+          ShowMessage('Finished');
+          Exit;
+        end;
+      if NodeIdx = 0 then
+        SavePath := 'tests/check';
+      if (TObject(Node.Data).ClassName = 'TSpritelyModel') then
+        begin
+          Model := TSpritelyModel(Node.Data);
+          Scene := Model.Scene;
+          DoingModel := Model.ModelName;
+          DoingNode := NodeIdx;
+          Viewport := CreateView(Scene);
+          Reflow;
+          WriteLnLog('Doing Model' + DoingModel);
+          if UseOversample then
+            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 8, 0, True)
+          else
+            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 1, 1, 0, True);
+        end;
+    end
+  else
+    begin
+      DoingNode := -1;
+      DoingModel := EmptyStr;
+      AniRec := Default(TAnimationController);
+      ShowMessage('Finished');
+    end;
+end;
 
 procedure TCastleApp.BeforeRender;
 begin
@@ -582,31 +624,41 @@ var
   FinalImage: TCastleImage;
   SName: String;
   FrameTime: TFloatTime;
+  SavePath: String;
 begin
   if(AniRec.Frame < AniRec.FrameCount) then
     begin
       FrameTime := AniRec.FrameTime * AniRec.Frame;
       WriteLnLog('Frame : ' + FloatToStr(FrameTime));
       Scene.ForceAnimationPose(AniRec.AnimationName, FrameTime, False, True);
-//      Scene.StopAnimation;
+
       FinalImage := FetchSprite(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.OverSample, AniRec.UseTransparency);
       if not(FinalImage = nil) then
         begin
-          SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
+          if DoingModel = EmptyStr then
+            SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png')
+          else
+            SName := FileNameAutoInc(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
           SaveImage(FinalImage, SName);
+          WriteLnLog('Saving to ' + SName);
           FreeAndNil(FinalImage);
 
-          InfoNote.Show('Frame : ' + IntToStr(AniRec.Frame) + '/' + IntToStr(AniRec.FrameCount) + ' = ' +
-              AniRec.AnimationName + ' @ ' + FormatFloat('#.##', 1 / AniRec.FrameTime) +
-              ' Time = ' + FormatFloat('#.00', FrameTime) + ' / ' +
-              FormatFloat('#.00', Scene.AnimationDuration(AniRec.AnimationName)));
+          InfoNote.Caption := 'Doing Model : ' + DoingModel + ' (' + IntToStr(DoingNode + 1) + '/' + IntToStr(CastleForm.Treeview1.Items.Count) + ')' + LineEnding +
+              'Doing Action : ' + SubActionList[AniRec.SubAction].Name + ' (' + IntToStr(AniRec.SubAction + 1)  + '/' + IntToStr(Length(SubActionList)) + ')' + LineEnding +
+              'Heading : ' + ValidHeadings[AniRec.CallCounter].ToUpper + ' (' + IntToStr(AniRec.CallCounter + 1) + '/' + IntToStr(Length(ValidHeadings)) + ')' + LineEnding +
+              'SavePath : ' + AniRec.SavePath + LineEnding +
+              'Time = ' + FormatFloat('#.00', FrameTime) + ' / ' +
+              FormatFloat('#.00', Scene.AnimationDuration(AniRec.AnimationName));
         end;
 
       if Abort then
       // if AniRec.Frame > 3 then
         begin
           Animating := False;
+          DoingNode := -1;
+          DoingModel := EmptyStr;
           AniRec := Default(TAnimationController);
+          ShowMessage('Aborted');
           Abort := False;
         end;
 
@@ -638,6 +690,14 @@ begin
             GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False);
           WriteLnLog('Finished render');
         end
+      else if not(DoingNode = -1) then
+        begin
+          Animating := False;
+          SavePath := AniRec.SavePath;
+          AniRec := Default(TAnimationController);
+          Inc(DoingNode);
+          ProcessAllModels(DoingNode, SavePath);
+        end
       else
         begin
           AniRec := Default(TAnimationController);
@@ -661,7 +721,7 @@ begin
               begin
                 AniRec := Default(TAnimationController);
                 AniRec.AnimationName := Scene.AnimationsList[Action];
-                AniRec.SubAction := 9;
+                AniRec.SubAction := 44;
               end;
             if Length(ValidHeadings) = 4 then
                CameraRotation := CallCounter * 2
@@ -675,7 +735,10 @@ begin
             AniRec.SavePath := SavePath;
             AniRec.Action := Action;
             AniRec.SaveHeading := ValidHeadings[AniRec.CallCounter];
-            CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading);
+            if DoingModel = EmptyStr then
+              CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading)
+            else
+              CheckForceDirectories(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading);
 
             AniRec.Frame := SubActionList[AniRec.SubAction].Start;
             AniRec.FrameCount := AniRec.Frame + SubActionList[AniRec.SubAction].Length;
@@ -722,7 +785,7 @@ begin
       SName := FileNameAutoInc('grab_%4.4d.png');
       SaveImage(FinalImage, SName);
       FreeAndNil(FinalImage);
-      InfoNote.Show('Saved Sprite : ' + SName);
+      InfoNote.Caption := 'Saved Sprite : ' + SName;
     end;
 end;
 
@@ -731,7 +794,7 @@ var
   Sprite: TRGBAlphaImage;
   FinalImage: TCastleImage;
   UseMainViewport: Boolean;
-  SName: String;
+//  SName: String;
 begin
   Result := nil;
   UseMainViewport := True;
