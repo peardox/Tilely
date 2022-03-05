@@ -15,6 +15,13 @@ uses
   Forms, GUIInitialization, castle_components, castle_base
   { you can add units after this };
 
+var
+  NvOptimusEnablement: Cardinal = 1;
+  AmdPowerXpressRequestHighPerformance: LongInt = 1;
+
+exports
+  NvOptimusEnablement, AmdPowerXpressRequestHighPerformance;
+
 {$R *.res}
 
 begin

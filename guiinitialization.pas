@@ -16,7 +16,7 @@ uses
   CastleVectors, CastleSceneCore, CastleScene, CastleTransform, CastleViewport,
   CastleCameras, X3DNodes, X3DFields, X3DTIme, CastleImages, CastleGLImages,
   CastleApplicationProperties, CastleLog, MainGameUnit, CastleTimeUtils,
-  CastleKeysMouse;
+  anitxtrec, CastleFilesUtils, CastleKeysMouse, CastleGLVersion;
 
 type
   { TCastleForm }
@@ -25,10 +25,12 @@ type
     CastleOpenDialog1: TCastleOpenDialog;
     CheckOversample: TCheckBox;
     EditHeight: TEdit;
+    EditFrames: TEdit;
     EditWidth: TEdit;
     ImageList1: TImageList;
     Label1: TLabel;
     Label2: TLabel;
+    Label3: TLabel;
     MainMenu1: TMainMenu;
     MenuExit: TMenuItem;
     FrontMenu: TMenuItem;
@@ -37,9 +39,13 @@ type
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
+    MenuGrabSprite: TMenuItem;
+    LoadAniTxt: TMenuItem;
+    MenuGrabAll: TMenuItem;
     MilitaryMenu: TMenuItem;
     Splitter1: TSplitter;
     StaticText1: TStaticText;
+    ToolButton10: TToolButton;
     ToolButton9: TToolButton;
     ToolPanel: TPanel;
     ToolButton8: TToolButton;
@@ -66,7 +72,11 @@ type
     procedure EditWidthChange(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure LoadAniTxtClick(Sender: TObject);
+    procedure MenuExitClick(Sender: TObject);
+    procedure MenuGrabAllClick(Sender: TObject);
     procedure TiltClick(Sender: TObject);
+    procedure TextureAltasClick(Sender: TObject);
     procedure TreeView1Click(Sender: TObject);
     procedure TreeView1SelectionChanged(Sender: TObject);
     procedure ViewMenuClick(Sender: TObject);
@@ -88,6 +98,7 @@ type
     procedure UpdateCaption;
     procedure SetViewpoint;
     procedure SwitchToSelectedNode;
+    procedure GrabAll;
   public
     CurrentFile: String;
     CurrentModel: String;
@@ -109,13 +120,27 @@ uses ShowCameraSettings, CastleURIUtils, MiscHelpers;
 
 procedure TCastleForm.FormCreate(Sender: TObject);
 begin
-  InitializeLog;
   AppTime := CastleGetTickCount64;
   Caption := 'Tilely';
   CurrentFile := EmptyStr;
   CurrentModel := EmptyStr;
   CurrentProjection := EmptyStr;
   Trackbar1.Visible := False;
+end;
+
+procedure TCastleForm.LoadAniTxtClick(Sender: TObject);
+begin
+  CastleApp.LoadSubActions('C:\\saved\\dev\\GLTF\\crazy-rabbits-animations-list.txt');
+end;
+
+procedure TCastleForm.MenuExitClick(Sender: TObject);
+begin
+  Exit;
+end;
+
+procedure TCastleForm.MenuGrabAllClick(Sender: TObject);
+begin
+  GrabAll;
 end;
 
 procedure TCastleForm.TiltClick(Sender: TObject);
@@ -133,6 +158,32 @@ begin
         Scene.Rotation := Vector4(1, 0, 0, SceneTilt * 2 * (Pi / 4));
         Reflow;
       end;
+    end;
+end;
+
+procedure TCastleForm.TextureAltasClick(Sender: TObject);
+begin
+  GrabAll;
+end;
+
+procedure TCastleForm.GrabAll;
+var
+  SavePath: String;
+begin
+  SavePath := 'tests/check';
+  CheckForceDirectories(SavePath);
+//  Directions := StrToIntDef(EditFrames.Text, 1);
+  if Assigned(CastleApp) then
+    begin
+      With CastleApp do
+        begin
+          WriteLnLog('Starting render');
+          if UseOversample then
+            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 8)
+          else
+            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 1, 1);
+          WriteLnLog('Finished render');
+        end;
     end;
 end;
 
@@ -187,7 +238,7 @@ procedure TCastleForm.UpdateCaption;
 begin
   with CastleApp do
     begin
-      Caption := 'Tilely | ' + CurrentModel +
+      Caption := 'Tilely | '  + GLVersion.Renderer + ' | ' + CurrentModel +
         ' | ' + CurrentProjection +
         ' @ ' +
         FloatToStr((CameraRotation / CameraRotationSteps) * 360) + ' ' + DegreeSign;
@@ -459,6 +510,8 @@ end;
 
 procedure TCastleForm.WindowOpen(Sender: TObject);
 begin
+  InitializeLog;
+
   Width := 640 + NavPanel.Width;
   Height := 640 + ToolBar1.Height + MainMenu1.Height;
   TCastleControlBase.MainControl := Window;

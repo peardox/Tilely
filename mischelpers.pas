@@ -35,6 +35,7 @@ type
   TCastleSceneHelper = class helper for TCastleScene
   public
     function Normalize: TVector3;
+    function IsVisible: Boolean;
   end;
 
   { TUIStateHelper }
@@ -148,7 +149,9 @@ begin
       begin
         if BoundingBox.MaxSize > 0 then
           begin
+            WriteLnLog('Normalized');
             Result := BoundingBox.Size;
+            Scale := Vector3(1, 1, 1);
             Center := Vector3(Min(BoundingBox.Data[0].X, BoundingBox.Data[1].X) + (BoundingBox.SizeX / 2),
                               Min(BoundingBox.Data[0].Y, BoundingBox.Data[1].Y) + (BoundingBox.SizeY / 2),
                               Min(BoundingBox.Data[0].Z, BoundingBox.Data[1].Z) + (BoundingBox.SizeZ / 2));
@@ -160,6 +163,11 @@ begin
           end;
       end;
     end;
+end;
+
+function TCastleSceneHelper.IsVisible: Boolean;
+begin
+  Result := IsVisibleNow;
 end;
 
 { TUIStateHelper }

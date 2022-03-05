@@ -45,8 +45,6 @@
           <Linking>
             <Debugging>
               <DebugInfoType Value="dsDwarf2Set"/>
-              <UseHeaptrc Value="True"/>
-              <TrashVariables Value="True"/>
               <UseExternalDbgSyms Value="True"/>
             </Debugging>
             <Options>
@@ -119,7 +117,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="8">
+    <Units Count="10">
       <Unit0>
         <Filename Value="TilelyLaz.pas"/>
         <IsPartOfProject Value="True"/>
@@ -163,6 +161,14 @@
         <Filename Value="ZipUrls.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit7>
+      <Unit8>
+        <Filename Value="TilelyLaz.lpr"/>
+        <IsPartOfProject Value="True"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="anitxtrec.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit9>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -1,8 +1,8 @@
 unit MainGameUnit;
 
 {$mode objfpc}{$H+}
- {$define devmode}
- {$define devstream}
+// {$define devmode}
+// {$define devstream}
 
 interface
 
@@ -19,13 +19,33 @@ uses
   CastleViewport, CastleCameras, CastleProjection,
   X3DLoadInternalOBJ, X3DNodes, X3DFields, X3DTIme, CastleRectangles,
   CastleImages, CastleGLImages, CastleDebugTransform,
-  CastleTextureImages, CastleCompositeImage, CastleBoxes,
+  CastleTextureImages, CastleBoxes,
   CastleApplicationProperties, CastleLog, CastleTimeUtils,
   CastleFilesUtils, CastleKeysMouse, CastleNotifications,
   RGBAlphaImageHelp, MiscHelpers, CastleURIUtils,
-  ZipUrls, CastleDownload;
+  anitxtrec, ZipUrls, CastleDownload;
 
 type
+  { TAnimationController }
+  TAnimationController = record
+    AnimationName: String;
+    SavePath: String;
+    SaveHeading: String;
+    SubAction: Cardinal;
+    Frame: Integer;
+    FrameCount: Integer;
+    FrameTime: TFloatTime;
+    SpriteWidth: Integer;
+    SpriteHeight: Integer;
+    OverSample: Integer;
+    UseTransparency: Boolean;
+    AtlasImage: TCastleImage;
+    FrameX: Integer;
+    FrameY: Integer;
+    Action: Cardinal;
+    CallCounter: Cardinal;
+  end;
+
   { TSpritelyModel }
 
   TSpritelyModel = class(TComponent)
@@ -65,6 +85,11 @@ type
     OriginalScale: Single;
     OriginalWidth: Single;
     StretchMultiplier: Single;
+    Animating: Boolean;
+    AniRec: TAnimationController;
+    TextureAtlasX: Cardinal;
+    TextureAtlasY: Cardinal;
+    SubActionList: TSubActionArray;
     procedure setCameraRotation(const AValue: Integer);
     procedure setCameraRotationSteps(const AValue: Integer);
     procedure setCameraElevation(const AValue: Single);
@@ -89,12 +114,17 @@ type
     procedure Start; override; // TUIState
     procedure Stop; override; // TUIState
     procedure BootStrap(Sender: TObject);
+    procedure FrameSync(Sender: TObject);
     procedure Reflow(const CalledFromResize: Boolean = False);
     procedure LoadUI;
+    procedure LoadSubActions(AniFile: String);
     function LoadScene(const AFile: String): TCastleScene;
     function CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False; const useMainViewport: Boolean = True): TCastleImage;
     procedure ShowAppMessage(const AMsg: String);
+    procedure MakeAtlas;
+    procedure GrabAtlas(const SpriteWidth: Integer; const SpriteHeight: Integer; const SavePath: String; const Action: Cardinal = 0; const OverSample: Integer = 8; const CallCounter: Cardinal = 0);
     procedure GrabSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True);
+    function FetchSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True): TCastleImage;
     property CameraRotation: Integer read fCameraRotation write setCameraRotation;
     property CameraRotationSteps: Integer read fCameraRotationSteps write setCameraRotationSteps;
     property CameraElevation: Single read fCameraElevation write setCameraElevation;
@@ -109,9 +139,6 @@ type
 var
   AppTime: Int64;
   CastleApp: TCastleApp;
-  {$ifdef devstream}
-  TestStream: TStream;
-  {$endif}
 
 const
   ValidModelMimeTypes: TStringArray = (
@@ -123,6 +150,11 @@ const
     'model/x3d+xml',
     'model/x3d+binary'
     );
+
+// ValidHeadings: TStringArray = ('s');
+// ValidHeadings: TStringArray = ('s', 'e', 'n', 'w');
+ ValidHeadings: TStringArray = ('s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw');
+
 implementation
 {$ifdef cgeapp}
 uses AppInitialization;
@@ -150,6 +182,10 @@ end;
 { TCastleApp }
 
 constructor TCastleApp.Create(AOwner: TComponent);
+{$ifdef devstream}
+var
+  TestStream: TStream;
+{$endif}
 begin
   inherited;
 //  LogTextureCache := True;
@@ -160,14 +196,19 @@ begin
   UseOversample := True;
   SettingUp := True;
   SceneTilt := 0;
+  AniRec := Default(TAnimationController);
+  TextureAtlasX := 2048;
+  TextureAtlasY := 2048;
+  Animating := False;
+  SubActionList := nil;
   StretchMultiplier := 1;
   CameraRotationSteps := 8;
-  CameraRotation := 1;
-  CameraElevation := 0.81625; // sqrt(2); //
+  CameraRotation := 0;
+  CameraElevation := 0; // .81625; // sqrt(2); //
   {$ifndef cgeapp}
   with CastleForm do
     begin
-      ViewID := 2;
+      ViewID := 0;
       CurrentProjection := PopupMenu1.Items[ViewID].Caption;
       PopupMenu1.Items[ViewID].Checked := True;
       EditWidth.Text := IntToStr(ViewWidth);
@@ -178,10 +219,6 @@ begin
   FullSize := True;
   SettingUp := False;
 
-  {$ifdef devstream}
-  TestStream := Download('castle-data:/Models/Paid/bear.zip', [soForceMemoryStream]);
-  {$endif}
-
   {$ifdef devmode}
   tz[0] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/freshwater_goby_no.1.zip');
   tz[1] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/honda_cb500f_scrambler_custom.zip');
@@ -190,7 +227,9 @@ begin
   tz[4] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/soul_of_the_forest_many_animations.zip');
 
   {$ifdef devstream}
+  TestStream := Download('castle-data:/Models/Paid/bear.zip', [soForceMemoryStream]);
   tz[5] := TZipFileSystem.Create(Self, TestStream, 'bear.zip');
+  FreeAndNil(TestStream);
   {$else}
   tz[5] := TZipFileSystem.Create(Self, 'castle-data:/Models/Paid/bear.zip');
   {$endif}
@@ -204,10 +243,12 @@ end;
 
 destructor TCastleApp.Destroy;
 begin
-  {$ifdef devstream}
-  FreeAndNil(TestStream);
-  {$endif}
   inherited;
+end;
+
+procedure TCastleApp.FrameSync(Sender: TObject);
+begin
+  Application.ProcessMessages;
 end;
 
 procedure TCastleApp.BootStrap(Sender: TObject);
@@ -224,7 +265,9 @@ begin
 //  LoadScene(tz[8].Protocol + '/gltf/arch_interior_floorBig_stone_varA.gltf');
 //  LoadScene(tz[9].Protocol + '/glb/arch_interior_floorBig_stone_varA.glb');
   {$else}
-  LoadScene('castle-data:/tests/oblique.glb');
+//  LoadScene('castle-data:/tests/oblique.glb');
+//  LoadScene('castle-data:/Models/paid/potato4.glb');
+  LoadScene('castle-data:/cr01.glb');
   {$endif}
 
 end;
@@ -318,6 +361,7 @@ begin
 
   CreateLabel(InfoLabel, 0);
   CreateNotification(InfoNote, 0, False);
+  InfoNote.Color := Vector4(0.0, 0.0, 0.0, 1.0);
   InfoLabel.Exists := False;
 end;
 
@@ -350,6 +394,7 @@ var
   mime: String;
   mimeok: Boolean;
 begin
+  AppTime := CastleGetTickCount64;
   Result := nil;
 
   mime := URIMimeType(AFile);
@@ -395,6 +440,16 @@ begin
 
     Result := newScene;
     Scene := newScene;
+    if(Scene.AnimationsList.Count > 0) then
+      begin
+        CastleForm.EditFrames.Enabled := True;
+        CastleForm.ToolButton10.Enabled := True;
+      end
+    else
+      begin
+        CastleForm.EditFrames.Enabled := False;
+        CastleForm.ToolButton10.Enabled := False;
+      end;
     Reflow;
   except
     on E : Exception do
@@ -478,6 +533,19 @@ end;
 procedure TCastleApp.Render;
 begin
   inherited;
+  if not(AppTime = 0) then
+    begin
+      if Assigned(Scene) and Scene.IsVisible then
+        begin
+          AppTime := CastleGetTickCount64 - AppTime;
+          WriteLnLog('Load time : ' + IntToStr(AppTime));
+          AppTime := 0;
+        end;
+    end;
+  if Animating then
+    begin
+       MakeAtlas;
+    end;
 end;
 
 procedure TCastleApp.Update(const SecondsPassed: Single; var HandleInput: boolean);
@@ -505,29 +573,162 @@ begin
   WriteLnLog(AMsg);
 end;
 
+procedure TCastleApp.MakeAtlas;
+var
+  FinalImage: TCastleImage;
+  SName: String;
+  FrameTime: TFloatTime;
+begin
+  if(AniRec.Frame < AniRec.FrameCount) then
+    begin
+      FrameTime := AniRec.FrameTime * AniRec.Frame;
+      WriteLnLog('Frame : ' + FloatToStr(FrameTime));
+      Scene.ForceAnimationPose(AniRec.AnimationName, FrameTime, False, True);
+//      Scene.StopAnimation;
+      FinalImage := FetchSprite(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.OverSample, AniRec.UseTransparency);
+      if not(FinalImage = nil) then
+        begin
+          SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '_' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
+          SaveImage(FinalImage, SName);
+          FreeAndNil(FinalImage);
+
+          InfoNote.Show('Frame : ' + IntToStr(AniRec.Frame) + '/' + IntToStr(AniRec.FrameCount) + ' = ' +
+              AniRec.AnimationName + ' @ ' + FormatFloat('#.##', 1 / AniRec.FrameTime) +
+              ' Time = ' + FormatFloat('#.00', FrameTime) + ' / ' +
+              FormatFloat('#.00', Scene.AnimationDuration(AniRec.AnimationName)));
+        end;
+      AniRec.Frame := AniRec.Frame + 1;
+    end
+  else
+    begin
+      Animating := False;
+      FreeAndNil(AniRec.AtlasImage);
+// {
+      AniRec.CallCounter := AniRec.CallCounter + 1;
+      if(AniRec.CallCounter < Length(ValidHeadings)) then
+        begin
+          WriteLnLog('Starting render');
+          if UseOversample then
+            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter)
+          else
+            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter);
+          WriteLnLog('Finished render');
+        end
+      else
+        ShowMessage('Finished');
+
+// }
+//      AniRec := Default(TAnimationController);
+    end;
+end;
+
+procedure TCastleApp.GrabAtlas(const SpriteWidth: Integer; const SpriteHeight: Integer; const SavePath: String; const Action: Cardinal = 0; const OverSample: Integer = 8; const CallCounter: Cardinal = 0);
+var
+  sa: TSubAction;
+begin
+  if not (SubActionList = nil) then
+    begin
+    if(not(Animating)) then
+      begin
+        if(Scene.AnimationsList.Count > 0) then
+          begin
+            WriteLnLog('Scene.AnimationsList.Count = ' + IntToStr(Scene.AnimationsList.Count));
+            if AniRec.CallCounter = 0 then
+              begin
+                AniRec := Default(TAnimationController);
+                AniRec.AnimationName := Scene.AnimationsList[Action];
+              end;
+            if Length(ValidHeadings) = 4 then
+               CameraRotation := CallCounter * 2
+            else
+               CameraRotation := CallCounter;
+
+  //          Viewport := CreateView(Scene);
+  //          Reflow;
+
+            AniRec.SavePath := SavePath;
+            AniRec.SaveHeading := ValidHeadings[AniRec.CallCounter];
+            CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '_' + AniRec.SaveHeading);
+
+            AniRec.Frame := SubActionList[AniRec.SubAction].Start;
+            AniRec.FrameCount := AniRec.Frame + SubActionList[AniRec.SubAction].Length;
+            AniRec.FrameTime := Scene.AnimationDuration(AniRec.AnimationName) / (Scene.AnimationDuration(AniRec.AnimationName) * 30);
+            Animating := True;
+
+            Scene.ForceAnimationPose(AniRec.AnimationName, 0, False, True);
+  //          Scene.Normalize;
+
+            AniRec.SpriteWidth := SpriteWidth;
+            AniRec.SpriteHeight := SpriteHeight;
+            AniRec.OverSample := OverSample;
+            AniRec.UseTransparency := True;
+  //          AniRec.AtlasImage := TRGBAlphaImage.Create(TextureAtlasX, TextureAtlasY);
+            AniRec.FrameX := 0;
+            AniRec.FrameY := 0;
+          end;
+      end;
+    end;
+end;
+
+procedure TCastleApp.LoadSubActions(AniFile: String);
+var
+  I: Integer;
+begin
+  SubActionList := AniTxtToSubAction(AniFile);
+
+  if not (SubActionList = nil) then
+    for I := 0 to Length(SubActionList) - 1 do
+      WriteLnLog('AniTxt #' + IntToStr(I) +
+        ' Start: ' + IntToStr(SubActionList[I].Start) +
+        ', Length: ' + IntToStr(SubActionList[I].Length) +
+        ', Name: ' + SubActionList[I].Name);
+
+end;
+
 procedure TCastleApp.GrabSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True);
 var
-  Sprite: TCastleImage;
+  FinalImage: TCastleImage;
   SName: String;
 begin
+  FinalImage := FetchSprite(SpriteWidth, SpriteHeight, OverSample, UseTransparency);
+  if not(FinalImage = nil) then
+    begin
+      SName := FileNameAutoInc('grab_%4.4d.png');
+      SaveImage(FinalImage, SName);
+      FreeAndNil(FinalImage);
+      InfoNote.Show('Saved Sprite : ' + SName);
+    end;
+end;
+
+function TCastleApp.FetchSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True): TCastleImage;
+var
+  Sprite: TRGBAlphaImage;
+  FinalImage: TCastleImage;
+  UseMainViewport: Boolean;
+begin
+  Result := nil;
+  UseMainViewport := True;
+
   if not (Scene = nil) then
     begin
-      InfoNote.Show('Creating Sprite');
-      Sprite := CreateSpriteImage(Scene, SpriteWidth * OverSample, SpriteHeight * OverSample, UseTransparency);
-      if not(Sprite = nil) then
+      FinalImage := CreateSpriteImage(Scene, SpriteWidth * OverSample, SpriteHeight * OverSample, UseTransparency, UseMainViewport);
+
+      if not(FinalImage = nil) then
         begin
+          FinalImage.Resize(Trunc((SpriteWidth  * OverSample) / (FinalImage.Height / FinalImage.Width)), (SpriteHeight  * OverSample), riLanczos);
+          Sprite := TRGBAlphaImage.Create(SpriteWidth * OverSample, SpriteHeight * OverSample);
+          Sprite.ClearAlpha(0);
+          Sprite.DrawFrom(FinalImage, (Sprite.Width - FinalImage.Width) div 2, 0, 0, 0, FinalImage.Width, FinalImage.Height, dmOverwrite);
+
           if (OverSample > 1) then
             begin
               Sprite.Resize(Trunc(Sprite.Width / OverSample), Trunc(Sprite.Height / OverSample), riLanczos); // Mitchel);
             end;
-          SName := FileNameAutoInc('grab_%4.4d.png');
-          SaveImage(Sprite, SName);
-          FreeAndNil(Sprite);
-          InfoNote.Show('Saved Sprite : ' + SName);
+          FreeAndNil(FinalImage);
+          Result := Sprite;
         end;
     end;
 end;
-
 
 function TCastleApp.CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False; const useMainViewport: Boolean = True): TCastleImage;
 var
@@ -592,13 +793,12 @@ begin
           CameraForm.ShowStats(SourceViewport);
           {$endif}
 
-
-          BackImage := TRGBAlphaImage.Create(TextureWidth, Trunc(TextureHeight * HeightAdjust));
+          BackImage := TRGBAlphaImage.Create(Trunc(TextureWidth), Trunc(TextureHeight * HeightAdjust));
           BackImage.ClearAlpha(0);
           Image := TDrawableImage.Create(BackImage, true, true);
           Image.RenderToImageBegin;
 
-          ViewportRect := Rectangle(0, 0, TextureWidth, Trunc(TextureHeight * HeightAdjust));
+          ViewportRect := Rectangle(0, 0, Trunc(TextureWidth), Trunc(TextureHeight * HeightAdjust));
           {$ifndef cgeapp}CastleForm.{$endif}Window.Container.RenderControl(SourceViewport,ViewportRect);
 
           Image.RenderToImageEnd;

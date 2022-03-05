@@ -33,6 +33,8 @@ heap.trc
 backup/
 *.bak
 lib/
+tests/
+data_real/
 castle-engine-output/
 # data/tests/
 dist/
