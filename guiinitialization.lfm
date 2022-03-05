@@ -292,7 +292,7 @@ object CastleForm: TCastleForm
     Width = 5
   end
   object MainMenu1: TMainMenu
-    Left = 37
+    Left = 40
     Top = 34
     object MenuTile: TMenuItem
       Caption = 'Tile'
@@ -323,6 +323,10 @@ object CastleForm: TCastleForm
       object MenuGrabAll: TMenuItem
         Caption = 'Grab All'
         OnClick = MenuGrabAllClick
+      end
+      object MenuAbort: TMenuItem
+        Caption = 'Abort'
+        OnClick = MenuAbortClick
       end
       object MenuExit: TMenuItem
         Caption = 'Exit'

@@ -42,6 +42,7 @@ type
     MenuGrabSprite: TMenuItem;
     LoadAniTxt: TMenuItem;
     MenuGrabAll: TMenuItem;
+    MenuAbort: TMenuItem;
     MilitaryMenu: TMenuItem;
     Splitter1: TSplitter;
     StaticText1: TStaticText;
@@ -75,6 +76,7 @@ type
     procedure LoadAniTxtClick(Sender: TObject);
     procedure MenuExitClick(Sender: TObject);
     procedure MenuGrabAllClick(Sender: TObject);
+    procedure MenuAbortClick(Sender: TObject);
     procedure TiltClick(Sender: TObject);
     procedure TextureAltasClick(Sender: TObject);
     procedure TreeView1Click(Sender: TObject);
@@ -141,6 +143,11 @@ end;
 procedure TCastleForm.MenuGrabAllClick(Sender: TObject);
 begin
   GrabAll;
+end;
+
+procedure TCastleForm.MenuAbortClick(Sender: TObject);
+begin
+  CastleApp.Abort := True;
 end;
 
 procedure TCastleForm.TiltClick(Sender: TObject);

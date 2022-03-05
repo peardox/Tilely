@@ -109,6 +109,7 @@ type
     UseOversample: Boolean;
     SceneTilt: Integer;
     OriginalSize: TVector3;
+    Abort: Boolean;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Start; override; // TUIState
@@ -195,6 +196,7 @@ begin
   ViewHeight := 256;
   UseOversample := True;
   SettingUp := True;
+  Abort := True;
   SceneTilt := 0;
   AniRec := Default(TAnimationController);
   TextureAtlasX := 2048;
@@ -218,6 +220,8 @@ begin
   OriginalSize := TVector3.Zero;
   FullSize := True;
   SettingUp := False;
+
+   LoadSubActions('tests/crazy-rabbits-animations-list.txt');
 
   {$ifdef devmode}
   tz[0] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/freshwater_goby_no.1.zip');
@@ -597,13 +601,22 @@ begin
               ' Time = ' + FormatFloat('#.00', FrameTime) + ' / ' +
               FormatFloat('#.00', Scene.AnimationDuration(AniRec.AnimationName)));
         end;
+
+      // if Abort then
+      if AniRec.Frame > 3 then
+        begin
+          Animating := False;
+          AniRec := Default(TAnimationController);
+          Abort := False;
+        end;
+
       AniRec.Frame := AniRec.Frame + 1;
     end
   else
     begin
       Animating := False;
       FreeAndNil(AniRec.AtlasImage);
-// {
+
       AniRec.CallCounter := AniRec.CallCounter + 1;
       if(AniRec.CallCounter < Length(ValidHeadings)) then
         begin
@@ -614,7 +627,7 @@ begin
             GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False);
           WriteLnLog('Finished render');
         end
-      else if(AniRec.SubAction < Length(SubActionList)) then
+      else if(AniRec.SubAction < Length(SubActionList) - 1) then
         begin // Process next SubAction
           AniRec.CallCounter := 0;
           AniRec.SubAction := AniRec.SubAction + 1;
@@ -627,11 +640,10 @@ begin
         end
       else
         begin
+          AniRec := Default(TAnimationController);
           ShowMessage('Finished');
         end;
 
-// }
-//      AniRec := Default(TAnimationController);
     end;
 end;
 
@@ -655,8 +667,9 @@ begin
             else
                CameraRotation := CallCounter;
 
-  //          Viewport := CreateView(Scene);
-  //          Reflow;
+
+            Viewport := CreateView(Scene);
+            Reflow;
 
             AniRec.SavePath := SavePath;
             AniRec.Action := Action;
@@ -669,7 +682,6 @@ begin
             Animating := True;
 
             Scene.ForceAnimationPose(AniRec.AnimationName, 0, False, True);
-  //          Scene.Normalize;
 
             AniRec.SpriteWidth := SpriteWidth;
             AniRec.SpriteHeight := SpriteHeight;
@@ -718,9 +730,10 @@ var
   Sprite: TRGBAlphaImage;
   FinalImage: TCastleImage;
   UseMainViewport: Boolean;
+  SName: String;
 begin
   Result := nil;
-  UseMainViewport := True;
+  UseMainViewport := False;
 
   if not (Scene = nil) then
     begin
@@ -728,10 +741,18 @@ begin
 
       if not(FinalImage = nil) then
         begin
-          FinalImage.Resize(Trunc((SpriteWidth  * OverSample) / (FinalImage.Height / FinalImage.Width)), (SpriteHeight  * OverSample), riLanczos);
+//          SName := FileNameAutoInc('full_%4.4d.png');
+//          SaveImage(FinalImage, SName);
+          if FinalImage.Height > FinalImage.Width then
+            FinalImage.Resize(Trunc((SpriteWidth * OverSample) / (FinalImage.Height / FinalImage.Width)), (SpriteHeight * OverSample), riLanczos)
+          else
+            FinalImage.Resize((SpriteWidth * OverSample), Trunc((SpriteHeight * OverSample) / (FinalImage.Width / FinalImage.Height)), riLanczos);
           Sprite := TRGBAlphaImage.Create(SpriteWidth * OverSample, SpriteHeight * OverSample);
           Sprite.ClearAlpha(0);
-          Sprite.DrawFrom(FinalImage, (Sprite.Width - FinalImage.Width) div 2, 0, 0, 0, FinalImage.Width, FinalImage.Height, dmOverwrite);
+          if FinalImage.Height > FinalImage.Width then
+            Sprite.DrawFrom(FinalImage, (Sprite.Width - FinalImage.Width) div 2, 0, 0, 0, FinalImage.Width, FinalImage.Height, dmOverwrite)
+          else
+            Sprite.DrawFrom(FinalImage, 0, (Sprite.Height - FinalImage.Height) div 2, 0, 0, FinalImage.Width, FinalImage.Height, dmOverwrite);
 
           if (OverSample > 1) then
             begin
@@ -746,6 +767,7 @@ end;
 function TCastleApp.CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False; const useMainViewport: Boolean = True): TCastleImage;
 var
   SourceViewport: TCastleViewport;
+  CloneScene: TCastleScene;
   ViewportRect: TRectangle;
   Image: TDrawableImage;
   BackImage: TRGBAlphaImage;
@@ -786,17 +808,33 @@ begin
               SourceViewport.Camera.Orthographic.Height := SourceViewport.EffectiveHeight;
             end;
 
-          SourceViewport.ViewFromRadius(2, CameraElevation, 2 * pi * (CameraRotation / CameraRotationSteps));
-          Extents := SourceViewport.CalcAngles(SourceScene);
+//          if not useMainViewport then { Possibly use clone if desired }
+          CloneScene := SourceScene.Clone(nil);
+          WriteLnLog(CloneScene.BoundingBox.MaxSize.ToString + ' / ' + CloneScene.BoundingBox.Size.ToString);
+          CloneScene.Normalize;
+          {
+          CloneScene.Scale := Vector3( CloneScene.BoundingBox.MaxSize / 4,
+                                       CloneScene.BoundingBox.MaxSize / 4,
+                                       CloneScene.BoundingBox.MaxSize / 4);
+          }
+          SourceViewport.ViewFromRadius(1, CameraElevation, 2 * pi * (CameraRotation / CameraRotationSteps));
+//          Extents := SourceViewport.CalcAngles(SourceScene);
+          Extents := SourceViewport.CalcAngles(CloneScene);
           SourceViewport.Camera.Orthographic.Scale := Extents.Size.X / TextureWidth;
 
+          WriteLnLog('Extents : ' + FloatToStr(Extents.Size.X) + ' x '  + FloatToStr(Extents.Size.Y));
+          WriteLnLog(CloneScene.BoundingBox.MaxSize.ToString + ' / ' + CloneScene.BoundingBox.Size.ToString);
+          WriteLnLog('==================================');
+{
+
+}
           if useMainViewport then { Possibly use clone if desired }
             SourceViewport.Items := ViewPort.Items
           else
             begin
               SourceViewport.Items.UseHeadlight := hlMainScene;
-              SourceViewport.Items.Add(SourceScene);
-              SourceViewport.Items.MainScene := SourceScene;
+              SourceViewport.Items.Add(CloneScene);
+              SourceViewport.Items.MainScene := CloneScene;
             end;
 
           HeightAdjust := Extents.Size.Y / Extents.Size.X;
@@ -876,7 +914,7 @@ begin
 
   NewVP.Setup2D;
   NewVP.AutoCamera := False;
-  NewVP.NavigationType := ntNone;
+//  NewVP.NavigationType := ntNone;
   NewVP.Camera.ProjectionType := ptOrthographic;
   NewVP.Camera.Orthographic.Origin := Vector2(0.5, 0.5);
 
@@ -890,7 +928,7 @@ begin
 
   OriginalScale := Extents.Size.Y / (VWidth * HeightAdjust);
   NewVP.Camera.Orthographic.Scale := OriginalScale;
-
+//  WriteLnLog('Extents : ' + FloatToStr(Extents.Size.X) + ' x '  + FloatToStr(Extents.Size.Y));
   NewVP.Height := Trunc(VWidth * HeightAdjust);
 
   if not (StretchMultiplier = 1) then
