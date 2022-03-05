@@ -122,7 +122,7 @@ type
     function CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False; const useMainViewport: Boolean = True): TCastleImage;
     procedure ShowAppMessage(const AMsg: String);
     procedure MakeAtlas;
-    procedure GrabAtlas(const SpriteWidth: Integer; const SpriteHeight: Integer; const SavePath: String; const Action: Cardinal = 0; const OverSample: Integer = 8; const CallCounter: Cardinal = 0);
+    procedure GrabAtlas(const SpriteWidth: Integer; const SpriteHeight: Integer; const SavePath: String; const Action: Cardinal = 0; const OverSample: Integer = 8; const CallCounter: Cardinal = 0; const IsFirstCall: Boolean = True);
     procedure GrabSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True);
     function FetchSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True): TCastleImage;
     property CameraRotation: Integer read fCameraRotation write setCameraRotation;
@@ -588,7 +588,7 @@ begin
       FinalImage := FetchSprite(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.OverSample, AniRec.UseTransparency);
       if not(FinalImage = nil) then
         begin
-          SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '_' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
+          SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
           SaveImage(FinalImage, SName);
           FreeAndNil(FinalImage);
 
@@ -609,22 +609,33 @@ begin
         begin
           WriteLnLog('Starting render');
           if UseOversample then
-            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter)
+            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False)
           else
-            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter);
+            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False);
+          WriteLnLog('Finished render');
+        end
+      else if(AniRec.SubAction < Length(SubActionList)) then
+        begin // Process next SubAction
+          AniRec.CallCounter := 0;
+          AniRec.SubAction := AniRec.SubAction + 1;
+          WriteLnLog('Starting render');
+          if UseOversample then
+            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False)
+          else
+            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False);
           WriteLnLog('Finished render');
         end
       else
-        ShowMessage('Finished');
+        begin
+          ShowMessage('Finished');
+        end;
 
 // }
 //      AniRec := Default(TAnimationController);
     end;
 end;
 
-procedure TCastleApp.GrabAtlas(const SpriteWidth: Integer; const SpriteHeight: Integer; const SavePath: String; const Action: Cardinal = 0; const OverSample: Integer = 8; const CallCounter: Cardinal = 0);
-var
-  sa: TSubAction;
+procedure TCastleApp.GrabAtlas(const SpriteWidth: Integer; const SpriteHeight: Integer; const SavePath: String; const Action: Cardinal = 0; const OverSample: Integer = 8; const CallCounter: Cardinal = 0; const IsFirstCall: Boolean = True);
 begin
   if not (SubActionList = nil) then
     begin
@@ -633,7 +644,8 @@ begin
         if(Scene.AnimationsList.Count > 0) then
           begin
             WriteLnLog('Scene.AnimationsList.Count = ' + IntToStr(Scene.AnimationsList.Count));
-            if AniRec.CallCounter = 0 then
+
+            if (AniRec.CallCounter = 0) and IsFirstCall then
               begin
                 AniRec := Default(TAnimationController);
                 AniRec.AnimationName := Scene.AnimationsList[Action];
@@ -647,8 +659,9 @@ begin
   //          Reflow;
 
             AniRec.SavePath := SavePath;
+            AniRec.Action := Action;
             AniRec.SaveHeading := ValidHeadings[AniRec.CallCounter];
-            CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '_' + AniRec.SaveHeading);
+            CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading);
 
             AniRec.Frame := SubActionList[AniRec.SubAction].Start;
             AniRec.FrameCount := AniRec.Frame + SubActionList[AniRec.SubAction].Length;

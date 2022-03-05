@@ -130,7 +130,7 @@ end;
 
 procedure TCastleForm.LoadAniTxtClick(Sender: TObject);
 begin
-  CastleApp.LoadSubActions('C:\\saved\\dev\\GLTF\\crazy-rabbits-animations-list.txt');
+  CastleApp.LoadSubActions('tests/crazy-rabbits-animations-list.txt');
 end;
 
 procedure TCastleForm.MenuExitClick(Sender: TObject);
