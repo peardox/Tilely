@@ -196,7 +196,7 @@ begin
   ViewHeight := 256;
   UseOversample := True;
   SettingUp := True;
-  Abort := True;
+  Abort := False;
   SceneTilt := 0;
   AniRec := Default(TAnimationController);
   TextureAtlasX := 2048;
@@ -602,8 +602,8 @@ begin
               FormatFloat('#.00', Scene.AnimationDuration(AniRec.AnimationName)));
         end;
 
-      // if Abort then
-      if AniRec.Frame > 3 then
+      if Abort then
+      // if AniRec.Frame > 3 then
         begin
           Animating := False;
           AniRec := Default(TAnimationController);
@@ -661,6 +661,7 @@ begin
               begin
                 AniRec := Default(TAnimationController);
                 AniRec.AnimationName := Scene.AnimationsList[Action];
+                AniRec.SubAction := 9;
               end;
             if Length(ValidHeadings) = 4 then
                CameraRotation := CallCounter * 2
@@ -733,7 +734,7 @@ var
   SName: String;
 begin
   Result := nil;
-  UseMainViewport := False;
+  UseMainViewport := True;
 
   if not (Scene = nil) then
     begin
@@ -808,25 +809,28 @@ begin
               SourceViewport.Camera.Orthographic.Height := SourceViewport.EffectiveHeight;
             end;
 
-//          if not useMainViewport then { Possibly use clone if desired }
-          CloneScene := SourceScene.Clone(nil);
-          WriteLnLog(CloneScene.BoundingBox.MaxSize.ToString + ' / ' + CloneScene.BoundingBox.Size.ToString);
-          CloneScene.Normalize;
-          {
-          CloneScene.Scale := Vector3( CloneScene.BoundingBox.MaxSize / 4,
-                                       CloneScene.BoundingBox.MaxSize / 4,
-                                       CloneScene.BoundingBox.MaxSize / 4);
-          }
-          SourceViewport.ViewFromRadius(1, CameraElevation, 2 * pi * (CameraRotation / CameraRotationSteps));
-//          Extents := SourceViewport.CalcAngles(SourceScene);
-          Extents := SourceViewport.CalcAngles(CloneScene);
+          if not useMainViewport then
+            begin
+              CloneScene := SourceScene.Clone(nil);
+              CloneScene.Normalize;
+            end;
+
+          SourceViewport.ViewFromRadius(2, CameraElevation, 2 * pi * (CameraRotation / CameraRotationSteps));
+          if useMainViewport then
+            Extents := SourceViewport.CalcAngles(SourceScene)
+          else
+            Extents := SourceViewport.CalcAngles(CloneScene);
+
           SourceViewport.Camera.Orthographic.Scale := Extents.Size.X / TextureWidth;
 
-          WriteLnLog('Extents : ' + FloatToStr(Extents.Size.X) + ' x '  + FloatToStr(Extents.Size.Y));
-          WriteLnLog(CloneScene.BoundingBox.MaxSize.ToString + ' / ' + CloneScene.BoundingBox.Size.ToString);
-          WriteLnLog('==================================');
 {
-
+WriteLnLog(CloneScene.BoundingBox.MaxSize.ToString + ' / ' + CloneScene.BoundingBox.Size.ToString);
+CloneScene.Scale := Vector3( CloneScene.BoundingBox.MaxSize / 4,
+                             CloneScene.BoundingBox.MaxSize / 4,
+                             CloneScene.BoundingBox.MaxSize / 4);
+WriteLnLog('Extents : ' + FloatToStr(Extents.Size.X) + ' x '  + FloatToStr(Extents.Size.Y));
+WriteLnLog(CloneScene.BoundingBox.MaxSize.ToString + ' / ' + CloneScene.BoundingBox.Size.ToString);
+WriteLnLog('==================================');
 }
           if useMainViewport then { Possibly use clone if desired }
             SourceViewport.Items := ViewPort.Items
@@ -875,6 +879,8 @@ begin
       finally
         FreeAndNil(SourceViewport);
         FreeAndNil(Image);
+        if not useMainViewport then
+          CloneScene.Free;
       end;
     end;
 end;
