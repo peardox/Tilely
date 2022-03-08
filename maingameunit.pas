@@ -733,6 +733,13 @@ begin
                 AniRec.AnimationName := Scene.AnimationsList[Action];
                 AniRec.SubAction := 0;
               end;
+
+            while (SubActionList[AniRec.SubAction].Active = 0) and
+                  (AniRec.SubAction < Length(SubActionList) - 1) do
+              begin
+                AniRec.SubAction := AniRec.SubAction + 1;
+              end;
+
             if Length(ValidHeadings) = 4 then
                CameraRotation := CallCounter * 2
             else
@@ -741,10 +748,10 @@ begin
 
             Viewport := CreateView(Scene);
             Reflow;
-
+{
             if SubActionList[AniRec.SubAction].Length <= 60 then
               SubActionList[AniRec.SubAction].Active := 1;
-
+}
             AniRec.SavePath := SavePath;
             AniRec.Action := Action;
             AniRec.SaveHeading := ValidHeadings[AniRec.CallCounter];
