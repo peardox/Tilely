@@ -227,7 +227,8 @@ begin
   FullSize := True;
   SettingUp := False;
 
-   LoadSubActions('tests/crazy-rabbits-animations-list.txt');
+  LoadSubActions('tests/crazy-rabbits-animations-list.txt');
+//  LoadSubActions('tests/kidspin.txt');
 
   {$ifdef devmode}
   tz[0] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/freshwater_goby_no.1.zip');
@@ -277,7 +278,7 @@ begin
   {$else}
 //  LoadScene('castle-data:/tests/oblique.glb');
 //  LoadScene('castle-data:/Models/paid/potato4.glb');
-  LoadScene('castle-data:/cr01.glb');
+//  LoadScene('castle-data:/KidSpin.glb');
   {$endif}
 
 end;
@@ -631,25 +632,34 @@ begin
       FrameTime := AniRec.FrameTime * AniRec.Frame;
       WriteLnLog('Frame : ' + FloatToStr(FrameTime));
       Scene.ForceAnimationPose(AniRec.AnimationName, FrameTime, False, True);
-
-      FinalImage := FetchSprite(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.OverSample, AniRec.UseTransparency);
-      if not(FinalImage = nil) then
+      if SubActionList[AniRec.SubAction].Active = 1 then
         begin
-          if DoingModel = EmptyStr then
-            SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png')
-          else
-            SName := FileNameAutoInc(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
-          SaveImage(FinalImage, SName);
-          WriteLnLog('Saving to ' + SName);
-          FreeAndNil(FinalImage);
+          FinalImage := FetchSprite(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.OverSample, AniRec.UseTransparency);
+          if not(FinalImage = nil) then
+            begin
+              if DoingModel = EmptyStr then
+                SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png')
+              else
+                SName := FileNameAutoInc(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
+              SaveImage(FinalImage, SName);
+              WriteLnLog('Saving to ' + SName);
+              FreeAndNil(FinalImage);
 
-          InfoNote.Caption := 'Doing Model : ' + DoingModel + ' (' + IntToStr(DoingNode + 1) + '/' + IntToStr(CastleForm.Treeview1.Items.Count) + ')' + LineEnding +
-              'Doing Action : ' + SubActionList[AniRec.SubAction].Name + ' (' + IntToStr(AniRec.SubAction + 1)  + '/' + IntToStr(Length(SubActionList)) + ')' + LineEnding +
-              'Heading : ' + ValidHeadings[AniRec.CallCounter].ToUpper + ' (' + IntToStr(AniRec.CallCounter + 1) + '/' + IntToStr(Length(ValidHeadings)) + ')' + LineEnding +
-              'SavePath : ' + AniRec.SavePath + LineEnding +
-              'Time = ' + FormatFloat('#.00', FrameTime) + ' / ' +
-              FormatFloat('#.00', Scene.AnimationDuration(AniRec.AnimationName));
-        end;
+              InfoNote.Caption := 'Doing Model : ' + DoingModel + ' (' + IntToStr(DoingNode + 1) + '/' + IntToStr(CastleForm.Treeview1.Items.Count) + ')' + LineEnding +
+                  'Doing Action : ' + SubActionList[AniRec.SubAction].Name + ' (' + IntToStr(AniRec.SubAction + 1)  + '/' + IntToStr(Length(SubActionList)) + ')' + LineEnding +
+                  'Heading : ' + ValidHeadings[AniRec.CallCounter].ToUpper + ' (' + IntToStr(AniRec.CallCounter + 1) + '/' + IntToStr(Length(ValidHeadings)) + ')' + LineEnding +
+                  'Frame : ' + IntToStr(AniRec.Frame - SubActionList[AniRec.SubAction].Start + 1) + '/' + IntToStr(SubActionList[AniRec.SubAction].Length) + LineEnding +
+                  'Time = ' + FormatFloat('#.00', FrameTime) + ' / ' +
+                  FormatFloat('#.00', Scene.AnimationDuration(AniRec.AnimationName));
+            end;
+        end
+      else
+        InfoNote.Caption := 'Skipping Model : ' + DoingModel + ' (' + IntToStr(DoingNode + 1) + '/' + IntToStr(CastleForm.Treeview1.Items.Count) + ')' + LineEnding +
+            'Skipping Action : ' + SubActionList[AniRec.SubAction].Name + ' (' + IntToStr(AniRec.SubAction + 1)  + '/' + IntToStr(Length(SubActionList)) + ')' + LineEnding +
+            'Heading : ' + ValidHeadings[AniRec.CallCounter].ToUpper + ' (' + IntToStr(AniRec.CallCounter + 1) + '/' + IntToStr(Length(ValidHeadings)) + ')' + LineEnding +
+            'Frame : ' + IntToStr(AniRec.Frame - SubActionList[AniRec.SubAction].Start + 1) + '/' + IntToStr(SubActionList[AniRec.SubAction].Length) + LineEnding +
+            'Time = ' + FormatFloat('#.00', FrameTime) + ' / ' +
+            FormatFloat('#.00', Scene.AnimationDuration(AniRec.AnimationName));
 
       if Abort then
       // if AniRec.Frame > 3 then
@@ -721,7 +731,7 @@ begin
               begin
                 AniRec := Default(TAnimationController);
                 AniRec.AnimationName := Scene.AnimationsList[Action];
-                AniRec.SubAction := 44;
+                AniRec.SubAction := 0;
               end;
             if Length(ValidHeadings) = 4 then
                CameraRotation := CallCounter * 2
@@ -732,17 +742,31 @@ begin
             Viewport := CreateView(Scene);
             Reflow;
 
+            if SubActionList[AniRec.SubAction].Length <= 60 then
+              SubActionList[AniRec.SubAction].Active := 1;
+
             AniRec.SavePath := SavePath;
             AniRec.Action := Action;
             AniRec.SaveHeading := ValidHeadings[AniRec.CallCounter];
-            if DoingModel = EmptyStr then
-              CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading)
-            else
-              CheckForceDirectories(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading);
+            if SubActionList[AniRec.SubAction].Active = 1 then
+              begin
+                if DoingModel = EmptyStr then
+                  CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading)
+                else
+                  CheckForceDirectories(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading);
+              end;
 
             AniRec.Frame := SubActionList[AniRec.SubAction].Start;
             AniRec.FrameCount := AniRec.Frame + SubActionList[AniRec.SubAction].Length;
-            AniRec.FrameTime := Scene.AnimationDuration(AniRec.AnimationName) / (Scene.AnimationDuration(AniRec.AnimationName) * 30);
+            AniRec.FrameTime :=  Scene.AnimationDuration(AniRec.AnimationName) /
+                                (Scene.AnimationDuration(AniRec.AnimationName) * 30);
+{
+            AniRec.FrameCount := AniRec.Frame + 30;
+            AniRec.FrameTime := (Scene.AnimationDuration(AniRec.AnimationName) /
+                                (Scene.AnimationDuration(AniRec.AnimationName) * 30)) *
+                                (SubActionList[AniRec.SubAction].Length / 30);
+}
+
             Animating := True;
 
             Scene.ForceAnimationPose(AniRec.AnimationName, 0, False, True);
@@ -797,7 +821,7 @@ var
 //  SName: String;
 begin
   Result := nil;
-  UseMainViewport := True;
+  UseMainViewport := False;
 
   if not (Scene = nil) then
     begin

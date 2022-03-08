@@ -183,8 +183,16 @@ begin
 end;
 
 procedure TCastleForm.TextureAltasClick(Sender: TObject);
+var
+  Node: TTreeNode;
 begin
-  GrabAll;
+  if TreeView1.Items.Count > 0 then
+    begin
+      Node := Treeview1.Items[0];
+      if not (Node = nil) then
+        CastleApp.ProcessAllModels(0, '');
+    end;
+  // GrabAll;
 end;
 
 procedure TCastleForm.GrabAll;

@@ -14,6 +14,7 @@ type
     FromFrame: Integer;
     ToFrame: Integer;
     Action: String;
+    Active: Integer;
   end;
 
   { TSubAction }
@@ -21,6 +22,7 @@ type
     Start: Cardinal;
     Length: Cardinal;
     Name: String;
+    Active: Integer;
   end;
 
   TSubActionArray = Array of TSubAction;
@@ -30,7 +32,7 @@ function AniTxtToSubAction(const InFile: String): TSubActionArray;
 function ParseText(const S: String): TAniLine;
 function ParseText_FormatA(const S: String): TAniLine;
 function ParseText_FormatB(const S: String): TAniLine;
-function SubAction(const aStart: Cardinal; const aLength: Cardinal; const aName: String): TSubAction;
+function SubAction(const aStart: Cardinal; const aLength: Cardinal; const aActive: Cardinal; const aName: String): TSubAction;
 
 implementation
 
@@ -44,12 +46,13 @@ const
   CHECK_LCASE_A  = $61;
   CHECK_LCASE_Z  = $7A;
 
-function SubAction(const aStart: Cardinal; const aLength: Cardinal; const aName: String): TSubAction;
+function SubAction(const aStart: Cardinal; const aLength: Cardinal; const aActive: Cardinal; const aName: String): TSubAction;
 begin
   Result := Default(TSubAction);
   Result.Start := aStart;
   Result.Length := aLength;
   Result.Name := aName;
+  Result.Active := aActive;
 end;
 
 {$inline on}
@@ -121,6 +124,7 @@ begin
       Result.Success := True;
       Result.FromFrame := StrToIntDef(TmpFrom.Trim, 0);
       Result.ToFrame := StrToIntDef(TmpTo.Trim, 0);
+      Result.Active := 1;
       Result.Action := Result.Action.Trim;
     end;
 end;
@@ -181,6 +185,7 @@ begin
       Result.Success := True;
       Result.FromFrame := StrToIntDef(TmpFrom.Trim, 0);
       Result.ToFrame := StrToIntDef(TmpTo.Trim, 0);
+      Result.Active := 1;
       Result.Action := Result.Action.Trim;
     end;
 end;
@@ -194,10 +199,12 @@ var
   stage: Integer;
   TmpFrom: String;
   TmpTo: String;
+  TmpActive: String;
 begin
   stage := 0;
   TmpFrom := EmptyStr;
   TmpTo := EmptyStr;
+  TmpActive := EmptyStr;
   Result := Default(TAniLine);
 
   // Get a pointer to the start of the string
@@ -209,7 +216,8 @@ begin
   for i := 0 to l - 1 do
     begin
 
-      if (stage < 2) and isDigit(ord(p^)) then
+      if (stage < 3) and isDigit(ord(p^)) then
+//      if (stage < 2) and isDigit(ord(p^)) then
         begin
           case stage of
             0:
@@ -220,7 +228,11 @@ begin
               begin
                 TmpTo += p^;
               end;
-            end;
+            2:    // Inserted
+              begin
+                TmpActive += p^;
+              end;
+            end;  // End of inserted
           end
         else
           begin
@@ -228,17 +240,20 @@ begin
               Inc(stage);
             if (stage = 1) and (Length(TmpTo) > 0) and not(isDigit(ord(p^))) then
               Inc(stage);
-            if (stage = 2) then
+            if (stage = 2) and (Length(TmpActive) > 0) and not(isDigit(ord(p^))) then // Inserted
+              Inc(stage);  // Inserted
+            if (stage = 3) then
               Result.Action += p^;
           end;
       Inc(p);
     end;
 
-  if (stage = 2) then
+  if (stage = 3) then
     begin
       Result.Success := True;
       Result.FromFrame := StrToIntDef(TmpFrom.Trim, 0);
       Result.ToFrame := StrToIntDef(TmpTo.Trim, 0);
+      Result.Active := StrToIntDef(TmpActive.Trim, 0);
       Result.Action := Result.Action.Trim;
     end;
 end;
@@ -313,7 +328,7 @@ begin
               Name := L.Action;
               Name := StringReplace(Name, '-','_', [rfReplaceAll]);
               Name := StringReplace(Name, ' ','_', [rfReplaceAll]);
-              Res[I] := SubAction(L.FromFrame, L.ToFrame - L.FromFrame, Name);
+              Res[I] := SubAction(L.FromFrame, L.ToFrame - L.FromFrame, L.Active, Name);
               Inc(I);
             end;
         end;
