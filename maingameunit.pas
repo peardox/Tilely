@@ -164,7 +164,8 @@ const
 
 // ValidHeadings: TStringArray = ('s');
 // ValidHeadings: TStringArray = ('s', 'e', 'n', 'w');
- ValidHeadings: TStringArray = ('s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw');
+// ValidHeadings: TStringArray = ('s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw');
+  ValidHeadings: TStringArray = ('0', '1', '2', '3', '4', '5', '6', '7');
 
 implementation
 {$ifdef cgeapp}
@@ -216,7 +217,7 @@ begin
   Animating := False;
   SubActionList := nil;
   StretchMultiplier := 1;
-  CameraRotationSteps := 8;
+  CameraRotationSteps := 32;
   CameraRotation := 0;
   ModelRotationSteps := CameraRotationSteps;
   ModelRotation := 0;
