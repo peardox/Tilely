@@ -80,6 +80,8 @@ type
     ViewGrid: TCastleImageControl;
     fCameraRotation: Integer;
     fCameraRotationSteps: Integer;
+    fModelRotation: Integer;
+    fModelRotationSteps: Integer;
     fCameraElevation: Single;
     ViewScale: Single;
     OriginalScale: Single;
@@ -94,6 +96,8 @@ type
     DoingNode: Integer;
     procedure setCameraRotation(const AValue: Integer);
     procedure setCameraRotationSteps(const AValue: Integer);
+    procedure setModelRotation(const AValue: Integer);
+    procedure setModelRotationSteps(const AValue: Integer);
     procedure setCameraElevation(const AValue: Single);
   public
     {$ifdef devmode}
@@ -111,6 +115,8 @@ type
     SceneTilt: Integer;
     OriginalSize: TVector3;
     Abort: Boolean;
+    AbortModel: Boolean;
+    AbortAction: Boolean;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Start; override; // TUIState
@@ -129,6 +135,8 @@ type
     function FetchSprite(const SpriteWidth: Integer; const SpriteHeight: Integer; const OverSample: Integer = 8; const UseTransparency: Boolean = True): TCastleImage;
     property CameraRotation: Integer read fCameraRotation write setCameraRotation;
     property CameraRotationSteps: Integer read fCameraRotationSteps write setCameraRotationSteps;
+    property ModelRotation: Integer read fModelRotation write setModelRotation;
+    property ModelRotationSteps: Integer read fModelRotationSteps write setModelRotationSteps;
     property CameraElevation: Single read fCameraElevation write setCameraElevation;
     procedure ShowInfo;
     function CreateView(const SourceScene: TCastleScene): TCastleViewport;
@@ -196,9 +204,11 @@ begin
   ViewScale := 1;
   ViewWidth := 256;
   ViewHeight := 256;
-  UseOversample := True;
+  UseOversample := False;
   SettingUp := True;
   Abort := False;
+  AbortAction := False;
+  AbortModel := False;
   SceneTilt := 0;
   AniRec := Default(TAnimationController);
   TextureAtlasX := 2048;
@@ -208,6 +218,8 @@ begin
   StretchMultiplier := 1;
   CameraRotationSteps := 8;
   CameraRotation := 0;
+  ModelRotationSteps := CameraRotationSteps;
+  ModelRotation := 0;
   CameraElevation := 0; // .81625; // sqrt(2); //
 
   {$ifndef cgeapp}
@@ -227,8 +239,10 @@ begin
   FullSize := True;
   SettingUp := False;
 
+//  LoadSubActions('tests/dbat.txt');
+//  LoadSubActions('tests/birds.txt');
   LoadSubActions('tests/crazy-rabbits-animations-list.txt');
-//  LoadSubActions('tests/kidspin.txt');
+//  LoadSubActions('tests/crazy-rabbits-animations-eat.txt');
 
   {$ifdef devmode}
   tz[0] := TZipFileSystem.Create(Self, 'castle-data:/Models/Sketchfab/freshwater_goby_no.1.zip');
@@ -309,6 +323,41 @@ begin
       if Assigned(Viewport) then
         begin
         Viewport.ViewFromRadius(2, CameraElevation, 2 * pi * (CameraRotation / CameraRotationSteps));
+        {$ifndef cgeapp}
+        CameraForm.ShowStats(Viewport);
+        {$endif}
+        end;
+      ShowInfo;
+    end;
+end;
+
+procedure TCastleApp.setModelRotation(const AValue: Integer);
+begin
+  if not(fModelRotation = AValue) then
+    begin
+      fModelRotation := AValue;
+      fModelRotation := fModelRotation mod fModelRotationSteps;
+      if Assigned(Viewport) then
+        begin
+// sbdbg        Scene.Rotation (2, CameraElevation, 2 * pi * (ModelRotation / ModelRotationSteps));
+          Scene.Rotation := Vector4(0, 1, 0, 2 * pi * (ModelRotation / ModelRotationSteps));
+        {$ifndef cgeapp}
+        CameraForm.ShowStats(Viewport);
+        {$endif}
+        end;
+      ShowInfo;
+
+    end;
+end;
+
+procedure TCastleApp.setModelRotationSteps(const AValue: Integer);
+begin
+  if not(fModelRotationSteps = AValue) then
+    begin
+      fModelRotationSteps := AValue;
+      if Assigned(Viewport) then
+        begin
+        Scene.Rotation := Vector4(0, 1, 0, 2 * pi * (ModelRotation / ModelRotationSteps));
         {$ifndef cgeapp}
         CameraForm.ShowStats(Viewport);
         {$endif}
@@ -449,12 +498,10 @@ begin
     if(Scene.AnimationsList.Count > 0) then
       begin
         CastleForm.EditFrames.Enabled := True;
-        CastleForm.ToolButton10.Enabled := True;
       end
     else
       begin
         CastleForm.EditFrames.Enabled := False;
-        CastleForm.ToolButton10.Enabled := False;
       end;
     Reflow;
   except
@@ -560,7 +607,7 @@ begin
           if UseOversample then
             GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 8, 0, True)
           else
-            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 1, 1, 0, True);
+            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 1, 0, True);
         end;
     end
   else
@@ -682,31 +729,51 @@ begin
       AniRec.CallCounter := AniRec.CallCounter + 1;
       if(AniRec.CallCounter < Length(ValidHeadings)) then
         begin
-          WriteLnLog('Starting render');
           if UseOversample then
             GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False)
           else
             GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False);
-          WriteLnLog('Finished render');
         end
       else if(AniRec.SubAction < Length(SubActionList) - 1) then
         begin // Process next SubAction
-          AniRec.CallCounter := 0;
-          AniRec.SubAction := AniRec.SubAction + 1;
-          WriteLnLog('Starting render');
-          if UseOversample then
-            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False)
+          if AbortAction then
+            begin
+              Animating := False;
+              DoingNode := -1;
+              DoingModel := EmptyStr;
+              AniRec := Default(TAnimationController);
+              ShowMessage('Aborted');
+              AbortAction := False;
+            end
           else
-            GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False);
-          WriteLnLog('Finished render');
+            begin
+              AniRec.CallCounter := 0;
+              AniRec.SubAction := AniRec.SubAction + 1;
+              if UseOversample then
+                GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False)
+              else
+                GrabAtlas(AniRec.SpriteWidth, AniRec.SpriteHeight, AniRec.SavePath, AniRec.Action, AniRec.OverSample, AniRec.CallCounter, False);
+            end;
         end
       else if not(DoingNode = -1) then
         begin
-          Animating := False;
-          SavePath := AniRec.SavePath;
-          AniRec := Default(TAnimationController);
-          Inc(DoingNode);
-          ProcessAllModels(DoingNode, SavePath);
+          if AbortModel then
+            begin
+              Animating := False;
+              DoingNode := -1;
+              DoingModel := EmptyStr;
+              AniRec := Default(TAnimationController);
+              ShowMessage('Aborted');
+              AbortModel := False;
+            end
+          else
+            begin
+              Animating := False;
+              SavePath := AniRec.SavePath;
+              AniRec := Default(TAnimationController);
+              Inc(DoingNode);
+              ProcessAllModels(DoingNode, SavePath);
+            end;
         end
       else
         begin
@@ -839,9 +906,19 @@ begin
 //          SName := FileNameAutoInc('full_%4.4d.png');
 //          SaveImage(FinalImage, SName);
           if FinalImage.Height > FinalImage.Width then
-            FinalImage.Resize(Trunc((SpriteWidth * OverSample) / (FinalImage.Height / FinalImage.Width)), (SpriteHeight * OverSample), riLanczos)
+            begin
+              if (OverSample <> 1) then
+                FinalImage.Resize(Trunc((SpriteWidth * OverSample) / (FinalImage.Height / FinalImage.Width)), (SpriteHeight * OverSample), riMitchel)
+              else
+                FinalImage.Resize(Trunc(SpriteWidth / (FinalImage.Height / FinalImage.Width)), SpriteHeight, riNearest)
+            end
           else
-            FinalImage.Resize((SpriteWidth * OverSample), Trunc((SpriteHeight * OverSample) / (FinalImage.Width / FinalImage.Height)), riLanczos);
+            begin
+              if (OverSample <> 1) then
+                FinalImage.Resize((SpriteWidth * OverSample), Trunc((SpriteHeight * OverSample) / (FinalImage.Width / FinalImage.Height)), riMitchel)
+              else
+                FinalImage.Resize(SpriteWidth, Trunc(SpriteHeight / (FinalImage.Width / FinalImage.Height)), riNearest);
+            end;
           Sprite := TRGBAlphaImage.Create(SpriteWidth * OverSample, SpriteHeight * OverSample);
           Sprite.ClearAlpha(0);
           if FinalImage.Height > FinalImage.Width then
@@ -851,7 +928,7 @@ begin
 
           if (OverSample > 1) then
             begin
-              Sprite.Resize(Trunc(Sprite.Width / OverSample), Trunc(Sprite.Height / OverSample), riLanczos); // Mitchel);
+              Sprite.Resize(Trunc(Sprite.Width / OverSample), Trunc(Sprite.Height / OverSample), riMitchel); // riNearest, riBilinear, riMitchel, riLanczos);
             end;
           FreeAndNil(FinalImage);
           Result := Sprite;

@@ -36,18 +36,21 @@ type
     FrontMenu: TMenuItem;
     Iso21Menu: TMenuItem;
     MenuItem1: TMenuItem;
+    MenuItem10: TMenuItem;
+    MenuItem11: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
-    MenuGrabSprite: TMenuItem;
     LoadAniTxt: TMenuItem;
-    MenuGrabAll: TMenuItem;
     MenuAbort: TMenuItem;
-    MenuProcessQueue: TMenuItem;
+    MenuItem5: TMenuItem;
+    MenuItem6: TMenuItem;
+    MenuItem7: TMenuItem;
+    MenuItem8: TMenuItem;
+    MenuItem9: TMenuItem;
     MilitaryMenu: TMenuItem;
     Splitter1: TSplitter;
     StaticText1: TStaticText;
-    ToolButton10: TToolButton;
     ToolButton9: TToolButton;
     ToolPanel: TPanel;
     ToolButton8: TToolButton;
@@ -55,7 +58,6 @@ type
     MenuTile: TMenuItem;
     MenuOpen: TMenuItem;
     MenuDebug: TMenuItem;
-    MenuInfo: TMenuItem;
     NavPanel: TPanel;
     PopupMenu1: TPopupMenu;
     ToolBar1: TToolBar;
@@ -78,6 +80,8 @@ type
     procedure MenuExitClick(Sender: TObject);
     procedure MenuGrabAllClick(Sender: TObject);
     procedure MenuAbortClick(Sender: TObject);
+    procedure MenuItem10Click(Sender: TObject);
+    procedure MenuItem11Click(Sender: TObject);
     procedure MenuProcessQueueClick(Sender: TObject);
     procedure TiltClick(Sender: TObject);
     procedure TextureAltasClick(Sender: TObject);
@@ -135,6 +139,7 @@ end;
 procedure TCastleForm.LoadAniTxtClick(Sender: TObject);
 begin
   CastleApp.LoadSubActions('tests/crazy-rabbits-animations-list.txt');
+//  CastleApp.LoadSubActions('tests/crazy-rabbits-animations-eat.txt');
 end;
 
 procedure TCastleForm.MenuExitClick(Sender: TObject);
@@ -150,6 +155,16 @@ end;
 procedure TCastleForm.MenuAbortClick(Sender: TObject);
 begin
   CastleApp.Abort := True;
+end;
+
+procedure TCastleForm.MenuItem10Click(Sender: TObject);
+begin
+  CastleApp.AbortModel := True;
+end;
+
+procedure TCastleForm.MenuItem11Click(Sender: TObject);
+begin
+  CastleApp.AbortAction := True;
 end;
 
 procedure TCastleForm.MenuProcessQueueClick(Sender: TObject);
@@ -177,6 +192,7 @@ begin
         if(SceneTilt > 3) then
           SceneTilt := 0;
         Scene.Rotation := Vector4(1, 0, 0, SceneTilt * 2 * (Pi / 4));
+//        Scene.Rotation := Vector4(1, 0, 0, SceneTilt * 2 * (Pi / 4));
         Reflow;
       end;
     end;
@@ -210,7 +226,7 @@ begin
           if UseOversample then
             GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 8, 0, True)
           else
-            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 1, 1, 0, True);
+            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 1, 0, True);
           WriteLnLog('Finished render');
         end;
     end;
@@ -411,7 +427,7 @@ begin
     begin
       if Assigned(Viewport) and not(SettingUp) then
         begin
-          CameraRotation := CameraRotation - 1;
+          ModelRotation := ModelRotation - 1;
           Viewport := CreateView(Scene);
           Reflow;
         end;
@@ -424,7 +440,7 @@ begin
     begin
       if Assigned(Viewport) and not(SettingUp) then
         begin
-          CameraRotation := CameraRotation + 1;
+          ModelRotation := ModelRotation + 1;
           Viewport := CreateView(Scene);
           Reflow;
         end;

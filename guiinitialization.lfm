@@ -167,16 +167,6 @@ object CastleForm: TCastleForm
         ParentShowHint = False
         ShowHint = True
       end
-      object ToolButton10: TToolButton
-        Left = 244
-        Hint = 'Create Texture Atlas'
-        Top = 2
-        Caption = 'Texture Atlas'
-        ImageIndex = 12
-        OnClick = TextureAltasClick
-        ParentShowHint = False
-        ShowHint = True
-      end
     end
     object Label1: TLabel
       Left = 727
@@ -306,31 +296,39 @@ object CastleForm: TCastleForm
         ShortCut = 16452
         OnClick = MenuDebugClick
       end
-      object MenuInfo: TMenuItem
-        Caption = 'Info'
-        ShortCut = 16457
-        OnClick = MenuInfoClick
-      end
       object LoadAniTxt: TMenuItem
         Caption = 'Load Action List'
         OnClick = LoadAniTxtClick
       end
-      object MenuGrabSprite: TMenuItem
-        Caption = 'Grab Sprite'
-        ShortCut = 32839
-        OnClick = GrabSpriteClick
-      end
-      object MenuGrabAll: TMenuItem
-        Caption = 'Grab All'
-        OnClick = MenuGrabAllClick
-      end
-      object MenuProcessQueue: TMenuItem
-        Caption = 'Process Queue'
-        OnClick = MenuProcessQueueClick
+      object MenuItem5: TMenuItem
+        Caption = 'Grab'
+        object MenuItem6: TMenuItem
+          Caption = 'Sprite'
+          OnClick = GrabSpriteClick
+        end
+        object MenuItem7: TMenuItem
+          Caption = 'Model'
+          OnClick = MenuGrabAllClick
+        end
+        object MenuItem8: TMenuItem
+          Caption = 'Queue'
+          OnClick = MenuProcessQueueClick
+        end
       end
       object MenuAbort: TMenuItem
         Caption = 'Abort'
-        OnClick = MenuAbortClick
+        object MenuItem9: TMenuItem
+          Caption = 'Right Now'
+          OnClick = MenuAbortClick
+        end
+        object MenuItem11: TMenuItem
+          Caption = 'After Action'
+          OnClick = MenuItem11Click
+        end
+        object MenuItem10: TMenuItem
+          Caption = 'After Model'
+          OnClick = MenuItem10Click
+        end
       end
       object MenuExit: TMenuItem
         Caption = 'Exit'
