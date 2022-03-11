@@ -23,7 +23,7 @@ uses
   CastleApplicationProperties, CastleLog, CastleTimeUtils,
   CastleFilesUtils, CastleKeysMouse, CastleNotifications,
   RGBAlphaImageHelp, MiscHelpers, CastleURIUtils,
-  anitxtrec, ZipUrls, CastleDownload;
+  anitxtrec, CastleDownload;
 
 type
   { TAnimationController }
