@@ -201,11 +201,11 @@ var
 begin
   inherited;
 //  LogTextureCache := True;
-  WavefrontPhongMaterials := False;
+//  WavefrontPhongMaterials := False;
   ViewScale := 1;
   ViewWidth := 256;
   ViewHeight := 256;
-  UseOversample := False;
+  UseOversample := True;
   SettingUp := True;
   Abort := False;
   AbortAction := False;
@@ -242,7 +242,7 @@ begin
 
 //  LoadSubActions('tests/dbat.txt');
 //  LoadSubActions('tests/birds.txt');
-  LoadSubActions('tests/crazy-rabbits-animations-list.txt');
+//  LoadSubActions('tests/crazy-rabbits-animations-list.txt');
 //  LoadSubActions('tests/crazy-rabbits-animations-eat.txt');
 
   {$ifdef devmode}
@@ -595,7 +595,9 @@ begin
           Exit;
         end;
       if NodeIdx = 0 then
-        SavePath := 'tests/check';
+        begin
+        end;
+        // SavePath := 'tests/check';
       if (TObject(Node.Data).ClassName = 'TSpritelyModel') then
         begin
           Model := TSpritelyModel(Node.Data);

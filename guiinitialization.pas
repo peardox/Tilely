@@ -49,6 +49,8 @@ type
     MenuItem8: TMenuItem;
     MenuItem9: TMenuItem;
     MilitaryMenu: TMenuItem;
+    OpenDialog1: TOpenDialog;
+    SelectDirectoryDialog1: TSelectDirectoryDialog;
     Splitter1: TSplitter;
     StaticText1: TStaticText;
     ToolButton9: TToolButton;
@@ -137,8 +139,15 @@ begin
 end;
 
 procedure TCastleForm.LoadAniTxtClick(Sender: TObject);
+var
+  Filename: String;
 begin
-  CastleApp.LoadSubActions('tests/crazy-rabbits-animations-list.txt');
+  if OpenDialog1.Execute then
+    begin
+      Filename := OpenDialog1.Filename;
+      CastleApp.LoadSubActions(Filename);
+    end;
+//  CastleApp.LoadSubActions('tests/crazy-rabbits-animations-list.txt');
 //  CastleApp.LoadSubActions('tests/crazy-rabbits-animations-eat.txt');
 end;
 
@@ -169,13 +178,20 @@ end;
 
 procedure TCastleForm.MenuProcessQueueClick(Sender: TObject);
 var
+  Filename: String;
   Node: TTreeNode;
 begin
   if TreeView1.Items.Count > 0 then
     begin
       Node := Treeview1.Items[0];
       if not (Node = nil) then
-        CastleApp.ProcessAllModels(0, '');
+        begin
+          if SelectDirectoryDialog1.Execute then
+            begin
+              Filename := SelectDirectoryDialog1.Filename;
+              CastleApp.ProcessAllModels(0, Filename);
+            end;
+        end;
     end;
 end;
 
@@ -215,19 +231,21 @@ procedure TCastleForm.GrabAll;
 var
   SavePath: String;
 begin
-  SavePath := 'tests/check';
-  CheckForceDirectories(SavePath);
-//  Directions := StrToIntDef(EditFrames.Text, 1);
-  if Assigned(CastleApp) then
+  if SelectDirectoryDialog1.Execute then
     begin
-      With CastleApp do
+      SavePath := SelectDirectoryDialog1.Filename;
+      CheckForceDirectories(SavePath);
+      if Assigned(CastleApp) then
         begin
-          WriteLnLog('Starting render');
-          if UseOversample then
-            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 8, 0, True)
-          else
-            GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 1, 0, True);
-          WriteLnLog('Finished render');
+          With CastleApp do
+            begin
+              WriteLnLog('Starting render');
+              if UseOversample then
+                GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 8, 0, True)
+              else
+                GrabAtlas(Trunc(ViewWidth), Trunc(ViewHeight), SavePath, 0, 1, 0, True);
+              WriteLnLog('Finished render');
+            end;
         end;
     end;
 end;

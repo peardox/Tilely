@@ -117,7 +117,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="10">
+    <Units Count="9">
       <Unit0>
         <Filename Value="TilelyLaz.pas"/>
         <IsPartOfProject Value="True"/>
@@ -158,17 +158,13 @@
         <IsPartOfProject Value="True"/>
       </Unit6>
       <Unit7>
-        <Filename Value="ZipUrls.pas"/>
+        <Filename Value="TilelyLaz.lpr"/>
         <IsPartOfProject Value="True"/>
       </Unit7>
       <Unit8>
-        <Filename Value="TilelyLaz.lpr"/>
-        <IsPartOfProject Value="True"/>
-      </Unit8>
-      <Unit9>
         <Filename Value="anitxtrec.pas"/>
         <IsPartOfProject Value="True"/>
-      </Unit9>
+      </Unit8>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
