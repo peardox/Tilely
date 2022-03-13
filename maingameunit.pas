@@ -165,7 +165,7 @@ const
 // ValidHeadings: TStringArray = ('s');
 // ValidHeadings: TStringArray = ('s', 'e', 'n', 'w');
 // ValidHeadings: TStringArray = ('s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw');
-  ValidHeadings: TStringArray = ('0', '1', '2', '3', '4', '5', '6', '7');
+  ValidHeadings: TStringArray = ('0');
 
 implementation
 {$ifdef cgeapp}
@@ -217,11 +217,11 @@ begin
   Animating := False;
   SubActionList := nil;
   StretchMultiplier := 1;
-  CameraRotationSteps := 32;
-  CameraRotation := 0;
+  CameraRotationSteps := 4;
+  CameraRotation := 1;
   ModelRotationSteps := CameraRotationSteps;
   ModelRotation := 0;
-  CameraElevation := 0; // .81625; // sqrt(2); //
+  CameraElevation := 9999; // .81625; // sqrt(2); //
 
   {$ifndef cgeapp}
   DoingModel := EmptyStr;
@@ -229,7 +229,7 @@ begin
 
   with CastleForm do
     begin
-      ViewID := 0;
+      ViewID := 1;
       CurrentProjection := PopupMenu1.Items[ViewID].Caption;
       PopupMenu1.Items[ViewID].Checked := True;
       EditWidth.Text := IntToStr(ViewWidth);
@@ -688,9 +688,9 @@ begin
           if not(FinalImage = nil) then
             begin
               if DoingModel = EmptyStr then
-                SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png')
+                SName := FileNameAutoInc(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png')
               else
-                SName := FileNameAutoInc(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
+                SName := FileNameAutoInc(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + SubActionList[AniRec.SubAction].Name + '_%4.4d.png');
               SaveImage(FinalImage, SName);
               WriteLnLog('Saving to ' + SName);
               FreeAndNil(FinalImage);
@@ -813,7 +813,7 @@ begin
             if Length(ValidHeadings) = 4 then
                CameraRotation := CallCounter * 2
             else
-               CameraRotation := CallCounter;
+               CameraRotation := 1; // CallCounter;
 
 
             Viewport := CreateView(Scene);
@@ -828,9 +828,9 @@ begin
             if SubActionList[AniRec.SubAction].Active = 1 then
               begin
                 if DoingModel = EmptyStr then
-                  CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading)
+                  CheckForceDirectories(AniRec.SavePath + '/' + SubActionList[AniRec.SubAction].Name)
                 else
-                  CheckForceDirectories(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name + '/' + AniRec.SaveHeading);
+                  CheckForceDirectories(AniRec.SavePath + '/' + DoingModel + '/' + SubActionList[AniRec.SubAction].Name);
               end;
 
             AniRec.Frame := SubActionList[AniRec.SubAction].Start;
