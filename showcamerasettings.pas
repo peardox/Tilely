@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, CastleCameras, CastleViewport, CastleQuaternions,
+  ExtCtrls, CastleCameras, CastleViewport, CastleQuaternions, CastleTransform,
   MiscHelpers;
 
 type

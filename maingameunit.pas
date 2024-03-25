@@ -217,7 +217,7 @@ begin
   Animating := False;
   SubActionList := nil;
   StretchMultiplier := 1;
-  CameraRotationSteps := 4;
+  CameraRotationSteps := 8;
   CameraRotation := 1;
   ModelRotationSteps := CameraRotationSteps;
   ModelRotation := 0;
@@ -476,7 +476,7 @@ begin
     newScene.Spatial := [ssDynamicCollisions, ssRendering];
     newScene.RenderOptions.MinificationFilter := minNearest;
     newScene.RenderOptions.MagnificationFilter := magNearest;
-    newScene.Setup2D;
+//    newScene.Setup2D;
     newScene.Load(AFile);
     OriginalSize := newScene.Normalize;
     newScene.HeadlightOn := True;
